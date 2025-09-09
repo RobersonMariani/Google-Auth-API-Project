@@ -1,0 +1,13 @@
+includes:
+  - ./vendor/phpstan/phpstan/conf/bleedingEdge.neon
+
+parameters:
+  level: 9
+  paths:
+    - app/
+    - routes/
+    - tests/
+  checkUninitializedProperties: true
+  inferPrivatePropertyTypeFromConstructor: true
+  ignoreErrors:
+    - '#Access to an undefined property App\\Modules\\User\\Models\\.*#'
