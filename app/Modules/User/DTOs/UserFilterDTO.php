@@ -32,6 +32,7 @@ class UserFilterDTO
 
         /** @var int $perPage */
         $perPage = filter_var($request->input('per_page', 20), FILTER_VALIDATE_INT) ?: 20;
+        $perPage = min(100, max(1, $perPage));
 
         return new self($name, $cpf, $perPage);
     }

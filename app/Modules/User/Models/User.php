@@ -3,8 +3,9 @@
 namespace App\Modules\User\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Sanctum\HasApiTokens;
 
 /**
  * Model que representa um usuário final cadastrado no sistema após autenticação via Google.
@@ -25,10 +26,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @method static \Illuminate\Database\Eloquent\Builder<self> orderBy(string $column, string $direction = 'asc')
  * @method static \Illuminate\Contracts\Pagination\LengthAwarePaginator<int, self> paginate(int $perPage = 15, array<int, string> $columns = ['*'], string $pageName = 'page', ?int $page = null)
  */
-
-class User extends Model
+class User extends Authenticatable
 {
     /** @use \Illuminate\Database\Eloquent\Factories\HasFactory<\Database\Factories\Modules\User\Models\UserFactory> */
+    use HasApiTokens;
     use HasFactory;
     use SoftDeletes;
 

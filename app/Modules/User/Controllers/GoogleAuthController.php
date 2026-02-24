@@ -2,6 +2,7 @@
 
 namespace App\Modules\User\Controllers;
 
+use App\Modules\User\Enums\AuthMessagesEnum;
 use App\Modules\User\Services\GoogleAuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -52,33 +53,26 @@ class GoogleAuthController extends Controller
         }
 
         try {
-            // Processa o callback e salva o usuário temporário com o token
             $user = $this->service->handleCallback($code);
 
-            // Recupera a URL de redirecionamento do front-end
-            $urlFront = env('FRONT_CALLBACK_URL');
+            /** @var string $urlFront */
+            $urlFront = config('services.front_callback_url');
 
-            if (!is_string($urlFront)) {
-                throw new \RuntimeException('Variável de ambiente FRONT_CALLBACK_URL inválida.');
+            if (empty($urlFront)) {
+                throw new \RuntimeException('Configuração services.front_callback_url inválida.');
             }
 
-            // Monta a URL final com o e-mail como parâmetro
-            $uri      = '/register?email=' . $user->email;
-            $endPoint = $urlFront . $uri;
+            $endPoint = $urlFront . '/register?email=' . urlencode($user->email);
 
-            // Redireciona o usuário para o front-end
             return redirect($endPoint);
         } catch (Throwable $e) {
-            // Loga qualquer erro ocorrido durante a autenticação
             Log::error('[GoogleAuthController@handleCallback] Erro ao autenticar com Google', [
                 'exception' => $e->getMessage(),
                 'code'      => $code,
             ]);
 
-            // Retorna resposta de erro genérica
             return response()->json([
-                'error'   => 'Falha na autenticação com o Google.',
-                'message' => $e->getMessage(),
+                'error' => AuthMessagesEnum::INTEGRATION_ERROR->value,
             ], 500);
         }
     }

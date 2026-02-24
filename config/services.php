@@ -40,4 +40,6 @@ return [
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect_uri' => env('GOOGLE_REDIRECT_URI'),
     ],
+
+    'front_callback_url' => env('FRONT_CALLBACK_URL', 'http://localhost:5173'),
 ];

@@ -3,6 +3,7 @@
 namespace App\Modules\User\Requests;
 
 use App\Modules\User\DTOs\CompleteUserDataDTO;
+use App\Modules\User\Rules\CpfRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -19,8 +20,8 @@ class CompleteUserRequest extends FormRequest
     {
         return [
             'name'         => 'required|string|max:255',
-            'cpf'          => 'required|string|max:14',
-            'birth_date'   => 'required|date',
+            'cpf'          => ['required', 'string', 'max:14', new CpfRule()],
+            'birth_date'   => 'required|date|before:today|after:1900-01-01',
             'google_token' => 'required|string',
         ];
     }

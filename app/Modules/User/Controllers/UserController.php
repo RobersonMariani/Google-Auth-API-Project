@@ -5,6 +5,7 @@ namespace App\Modules\User\Controllers;
 use App\Modules\User\DTOs\UserFilterDTO;
 use App\Modules\User\Enums\UserMessagesEnum;
 use App\Modules\User\Requests\CompleteUserRequest;
+use App\Modules\User\Resources\UserResource;
 use App\Modules\User\Services\UserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -31,7 +32,7 @@ class UserController extends Controller
 
         return response()->json([
             'message' => UserMessagesEnum::LISTING,
-            'data'    => $users,
+            'data'    => UserResource::collection($users),
         ], Response::HTTP_OK);
     }
 
@@ -47,7 +48,7 @@ class UserController extends Controller
 
         return response()->json([
             'message' => UserMessagesEnum::CREATED,
-            'data'    => $user,
+            'data'    => new UserResource($user),
         ], Response::HTTP_CREATED);
     }
 }

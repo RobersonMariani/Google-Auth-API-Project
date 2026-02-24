@@ -46,7 +46,9 @@ class UserService
      */
     public function completeUserData(CompleteUserDataDTO $dto): User
     {
-        $temporaryUser = TemporaryUser::where('email', $this->getEmailFromToken($dto->google_token))->first();
+        $temporaryUser = TemporaryUser::notExpired()
+            ->where('email', $this->getEmailFromToken($dto->google_token))
+            ->first();
 
         if (!$temporaryUser) {
             throw new Exception(AuthMessagesEnum::TOKEN_INVALID->value);

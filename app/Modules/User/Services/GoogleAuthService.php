@@ -49,21 +49,16 @@ class GoogleAuthService
         $service    = new Google_Service_Oauth2($client);
         $googleUser = $service->userinfo->get();
 
-        $user = TemporaryUser::whereEmail($googleUser->email)->first();
+        $expiresAt = now()->addMinutes(TemporaryUser::EXPIRATION_MINUTES);
 
-        if ($user) {
-            $user->update([
+        return TemporaryUser::updateOrCreate(
+            ['email' => $googleUser->email],
+            [
                 'google_id'    => Crypt::encryptString($googleUser->id),
                 'google_token' => Crypt::encryptString($tokenData['access_token']),
-            ]);
-            return $user;
-        }
-
-        return TemporaryUser::create([
-            'email'        => $googleUser->email,
-            'google_id'    => Crypt::encryptString($googleUser->id),
-            'google_token' => Crypt::encryptString($tokenData['access_token']),
-        ]);
+                'expires_at'   => $expiresAt,
+            ]
+        );
     }
 
     /**

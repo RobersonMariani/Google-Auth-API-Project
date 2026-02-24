@@ -8,20 +8,17 @@ use Illuminate\Support\Facades\Route;
  * Rotas relacionadas aos usuários do sistema.
  */
 Route::prefix('users')->group(function () {
-    // Lista usuários com filtros opcionais
-    Route::get('/', [UserController::class, 'index']);
+    Route::get('/', [UserController::class, 'index'])
+        ->middleware('auth:sanctum');
 
-    // Finaliza o cadastro de um usuário após login via Google
-    Route::post('/complete', [UserController::class, 'complete']);
+    Route::post('/complete', [UserController::class, 'complete'])
+        ->middleware('throttle:registration');
 });
 
 /**
  * Rotas para autenticação com o Google (OAuth).
  */
-Route::prefix('google')->group(function () {
-    // Retorna a URL de login do Google
+Route::prefix('google')->middleware('throttle:auth')->group(function () {
     Route::get('/login-url', [GoogleAuthController::class, 'getLoginUrl']);
-
-    // Manipula o callback do Google após autenticação
     Route::get('/callback', [GoogleAuthController::class, 'handleCallback']);
 });
