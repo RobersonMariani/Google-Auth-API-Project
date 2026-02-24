@@ -48,7 +48,7 @@ class GoogleAuthController extends Controller
         // Verifica se o código é válido
         if (!is_string($code) || empty($code)) {
             return response()->json([
-                'error' => 'Código inválido',
+                'error' => AuthMessagesEnum::INVALID_CODE->value,
             ], 400);
         }
 
@@ -59,7 +59,7 @@ class GoogleAuthController extends Controller
             $urlFront = config('services.front_callback_url');
 
             if (empty($urlFront)) {
-                throw new \RuntimeException('Configuração services.front_callback_url inválida.');
+                throw new \RuntimeException(AuthMessagesEnum::INVALID_FRONT_CONFIG->value);
             }
 
             $endPoint = $urlFront . '/register?email=' . urlencode($user->email);

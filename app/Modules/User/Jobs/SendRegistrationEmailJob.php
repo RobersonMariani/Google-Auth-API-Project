@@ -2,6 +2,8 @@
 
 namespace App\Modules\User\Jobs;
 
+use App\Modules\User\Enums\EmailMessagesEnum;
+use App\Modules\User\Enums\MailLogStatusEnum;
 use App\Modules\User\Models\MailLog;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -41,14 +43,14 @@ class SendRegistrationEmailJob implements ShouldQueue
     {
         Log::info('Sending registration email to: ' . $this->email);
 
-        Mail::raw('Seu cadastro foi concluído com sucesso!', function ($message) {
-            $message->to($this->email)->subject('Cadastro concluído');
+        Mail::raw(EmailMessagesEnum::REGISTRATION_BODY->value, function ($message) {
+            $message->to($this->email)->subject(EmailMessagesEnum::REGISTRATION_SUBJECT->value);
         });
 
         MailLog::create([
             'user_email' => $this->email,
-            'subject'    => 'Cadastro concluído',
-            'status'     => 'sent',
+            'subject'    => EmailMessagesEnum::REGISTRATION_SUBJECT->value,
+            'status'     => MailLogStatusEnum::SENT->value,
             'sent_at'    => now(),
         ]);
     }
@@ -64,8 +66,8 @@ class SendRegistrationEmailJob implements ShouldQueue
 
         MailLog::create([
             'user_email' => $this->email,
-            'subject'    => 'Cadastro concluído',
-            'status'     => 'failed',
+            'subject'    => EmailMessagesEnum::REGISTRATION_SUBJECT->value,
+            'status'     => MailLogStatusEnum::FAILED->value,
             'sent_at'    => now(),
         ]);
     }

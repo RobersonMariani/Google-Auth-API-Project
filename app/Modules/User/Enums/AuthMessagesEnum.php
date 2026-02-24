@@ -5,6 +5,9 @@ namespace App\Modules\User\Enums;
 enum AuthMessagesEnum: string
 {
     case INTEGRATION_ERROR      = 'Erro ao integrar com o Google.';
+    case INVALID_CODE           = 'Código inválido';
+    case INVALID_GOOGLE_CONFIG  = 'Configuração do Google inválida.';
+    case INVALID_FRONT_CONFIG   = 'Configuração services.front_callback_url inválida.';
     case TEMPORARY_USER_CREATED = 'Usuário pendente criado com sucesso.';
     case TEMPORARY_USER_UPDATED = 'Usuário pendente atualizado com sucesso.';
     case USER_FOUND             = 'Usuário encontrado com sucesso.';

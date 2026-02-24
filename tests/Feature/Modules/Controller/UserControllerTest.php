@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Modules\Controller;
 
+use App\Modules\User\Enums\UserMessagesEnum;
 use App\Modules\User\Models\TemporaryUser;
 use App\Modules\User\Models\User;
 use App\Modules\User\Repositories\UserRepositoryInterface;
@@ -92,7 +93,7 @@ class UserControllerTest extends TestCase
 
         // Assert
         $response->assertStatus(201)
-            ->assertJsonFragment(['message' => 'Usuário criado com sucesso.']);
+            ->assertJsonFragment(['message' => UserMessagesEnum::CREATED->value]);
         $this->assertDatabaseHas('users', ['google_email' => $email, 'cpf' => '52998224725']);
     }
 

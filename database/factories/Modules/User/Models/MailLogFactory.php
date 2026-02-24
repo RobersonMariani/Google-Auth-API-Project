@@ -2,6 +2,7 @@
 
 namespace Database\Factories\Modules\User\Models;
 
+use App\Modules\User\Enums\MailLogStatusEnum;
 use App\Modules\User\Models\MailLog;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -21,9 +22,9 @@ class MailLogFactory extends Factory
     {
         return [
             'user_email' => $this->faker->unique()->safeEmail,
-            'subject' => $this->faker->sentence,
-            'status' => $this->faker->randomElement(['sent', 'failed']),
-            'sent_at' => $this->faker->dateTime(),
+            'subject'    => $this->faker->sentence,
+            'status'     => $this->faker->randomElement([MailLogStatusEnum::SENT->value, MailLogStatusEnum::FAILED->value]),
+            'sent_at'    => $this->faker->dateTime(),
         ];
     }
 }

@@ -66,7 +66,7 @@ class GoogleAuthControllerTest extends TestCase
 
         // Assert
         $response->assertStatus(400)
-            ->assertJsonFragment(['error' => 'Código inválido']);
+            ->assertJsonFragment(['error' => AuthMessagesEnum::INVALID_CODE->value]);
     }
 
     public function testCallbackWithEmptyCodeReturns400(): void
@@ -79,7 +79,7 @@ class GoogleAuthControllerTest extends TestCase
 
         // Assert
         $response->assertStatus(400)
-            ->assertJsonFragment(['error' => 'Código inválido']);
+            ->assertJsonFragment(['error' => AuthMessagesEnum::INVALID_CODE->value]);
     }
 
     public function testCallbackWithServiceErrorReturnsGenericMessage(): void

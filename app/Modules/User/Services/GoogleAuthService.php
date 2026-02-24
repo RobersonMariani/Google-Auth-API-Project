@@ -74,7 +74,7 @@ class GoogleAuthService
         $redirectUri  = config('services.google.redirect_uri');
 
         if (!is_string($clientId) || !is_string($clientSecret) || !is_string($redirectUri)) {
-            throw new \RuntimeException('Configuração do Google inválida.');
+            throw new \RuntimeException(AuthMessagesEnum::INVALID_GOOGLE_CONFIG->value);
         }
 
         $client->setClientId($clientId);
