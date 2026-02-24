@@ -3,6 +3,7 @@
 namespace App\Modules\User\Controllers;
 
 use App\Modules\User\Enums\AuthMessagesEnum;
+use App\Modules\User\Models\User;
 use App\Modules\User\Services\GoogleAuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -53,7 +54,7 @@ class GoogleAuthController extends Controller
         }
 
         try {
-            $user = $this->service->handleCallback($code);
+            $tempUser = $this->service->handleCallback($code);
 
             /** @var string $urlFront */
             $urlFront = config('services.front_callback_url');
@@ -64,7 +65,15 @@ class GoogleAuthController extends Controller
                 throw new \RuntimeException(AuthMessagesEnum::INVALID_FRONT_CONFIG->value);
             }
 
-            $endPoint = $urlFront . $registerPath . '?email=' . urlencode($user->email);
+            $existingUser = User::where('google_email', $tempUser->email)->first();
+
+            if ($existingUser) {
+                $token = $existingUser->createToken('auth_token')->plainTextToken;
+
+                return redirect($urlFront . '/users?token=' . $token);
+            }
+
+            $endPoint = $urlFront . $registerPath . '?email=' . urlencode($tempUser->email);
 
             return redirect($endPoint);
         } catch (Throwable $e) {

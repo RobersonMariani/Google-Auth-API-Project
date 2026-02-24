@@ -31,8 +31,12 @@ class UserController extends Controller
         $users   = $this->service->listUsers($filters);
 
         return response()->json([
-            'message' => UserMessagesEnum::LISTING,
-            'data'    => UserResource::collection($users),
+            'message'      => UserMessagesEnum::LISTING,
+            'data'         => UserResource::collection($users),
+            'current_page' => $users->currentPage(),
+            'last_page'    => $users->lastPage(),
+            'per_page'     => $users->perPage(),
+            'total'        => $users->total(),
         ], Response::HTTP_OK);
     }
 
