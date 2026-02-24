@@ -19,10 +19,20 @@ class CompleteUserRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'         => 'required|string|max:255',
-            'cpf'          => ['required', 'string', 'max:14', new CpfRule()],
-            'birth_date'   => 'required|date|before:today|after:1900-01-01',
-            'google_token' => 'required|string',
+            'name'       => 'required|string|max:255',
+            'cpf'        => ['required', 'string', 'max:14', new CpfRule()],
+            'birth_date' => 'required|date|before:today|after:1900-01-01',
+            'email'      => 'required|email|unique:users,google_email',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'email.unique' => 'Este e-mail já está cadastrado no sistema.',
         ];
     }
 
@@ -41,14 +51,14 @@ class CompleteUserRequest extends FormRequest
      */
     public function toDTO(): CompleteUserDataDTO
     {
-        /** @var array{name: string, cpf: string, birth_date: string, google_token: string} $data */
+        /** @var array{name: string, cpf: string, birth_date: string, email: string} $data */
         $data = $this->validated();
 
         return new CompleteUserDataDTO(
             $data['name'],
             preg_replace('/\D/', '', $data['cpf']) ?? '',
             $data['birth_date'],
-            $data['google_token']
+            $data['email']
         );
     }
 }

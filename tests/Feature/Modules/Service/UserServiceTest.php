@@ -13,31 +13,17 @@ use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Crypt;
-use Mockery;
 use Tests\TestCase;
 
 class UserServiceTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function createServiceWithMockedToken(string $email): UserService
-    {
-        $repository = app(UserRepositoryInterface::class);
-
-        /** @var UserService&\Mockery\MockInterface $service */
-        $service = Mockery::mock(UserService::class, [$repository])->makePartial();
-        $service->shouldAllowMockingProtectedMethods();
-        $service->allows(['getEmailFromToken' => $email]);
-
-        return $service;
-    }
-
     public function testCompleteUserDataCreatesUserFromTemporary(): void
     {
         // Arrange
-        $email   = 'service@test.com';
-        $token   = 'mocked-token';
-        $service = $this->createServiceWithMockedToken($email);
+        $email = 'service@test.com';
+        $token = 'mocked-token';
 
         TemporaryUser::create([
             'email'        => $email,
@@ -46,11 +32,14 @@ class UserServiceTest extends TestCase
             'expires_at'   => now()->addMinutes(15),
         ]);
 
+        $repository = app(UserRepositoryInterface::class);
+        $service    = new UserService($repository);
+
         $dto = new CompleteUserDataDTO(
             name: 'Novo Teste',
             cpf: '99988877766',
             birth_date: '1985-05-10',
-            google_token: $token
+            email: $email
         );
 
         // Act
@@ -64,9 +53,8 @@ class UserServiceTest extends TestCase
     public function testCompleteUserDataDeletesTemporaryUserAfter(): void
     {
         // Arrange
-        $email   = 'delete@test.com';
-        $token   = 'mocked-token';
-        $service = $this->createServiceWithMockedToken($email);
+        $email = 'delete@test.com';
+        $token = 'mocked-token';
 
         TemporaryUser::create([
             'email'        => $email,
@@ -75,11 +63,14 @@ class UserServiceTest extends TestCase
             'expires_at'   => now()->addMinutes(15),
         ]);
 
+        $repository = app(UserRepositoryInterface::class);
+        $service    = new UserService($repository);
+
         $dto = new CompleteUserDataDTO(
             name: 'Delete Test',
             cpf: '88877766655',
             birth_date: '1992-03-20',
-            google_token: $token
+            email: $email
         );
 
         // Act
@@ -92,22 +83,23 @@ class UserServiceTest extends TestCase
     public function testCompleteUserDataWithExpiredTemporaryThrowsException(): void
     {
         // Arrange
-        $email   = 'expired@test.com';
-        $token   = 'mocked-token';
-        $service = $this->createServiceWithMockedToken($email);
+        $email = 'expired@test.com';
 
         TemporaryUser::create([
             'email'        => $email,
             'google_id'    => Crypt::encryptString('gid'),
-            'google_token' => Crypt::encryptString($token),
+            'google_token' => Crypt::encryptString('token'),
             'expires_at'   => now()->subMinutes(1),
         ]);
+
+        $repository = app(UserRepositoryInterface::class);
+        $service    = new UserService($repository);
 
         $dto = new CompleteUserDataDTO(
             name: 'Expired Test',
             cpf: '77766655544',
             birth_date: '1990-01-01',
-            google_token: $token
+            email: $email
         );
 
         // Assert
@@ -121,13 +113,14 @@ class UserServiceTest extends TestCase
     public function testCompleteUserDataWithNonExistingTemporaryThrowsException(): void
     {
         // Arrange
-        $service = $this->createServiceWithMockedToken('ghost@test.com');
+        $repository = app(UserRepositoryInterface::class);
+        $service    = new UserService($repository);
 
         $dto = new CompleteUserDataDTO(
             name: 'Ghost User',
             cpf: '66655544433',
             birth_date: '1988-07-04',
-            google_token: 'non-existing-token'
+            email: 'ghost@test.com'
         );
 
         // Assert

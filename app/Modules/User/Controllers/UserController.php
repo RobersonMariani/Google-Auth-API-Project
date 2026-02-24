@@ -46,9 +46,12 @@ class UserController extends Controller
             $request->toDTO()
         );
 
+        $token = $user->createToken('auth_token')->plainTextToken;
+
         return response()->json([
             'message' => UserMessagesEnum::CREATED,
             'data'    => new UserResource($user),
+            'token'   => $token,
         ], Response::HTTP_CREATED);
     }
 }

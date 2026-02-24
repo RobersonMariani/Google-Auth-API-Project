@@ -10,8 +10,6 @@ use App\Modules\User\Models\TemporaryUser;
 use App\Modules\User\Models\User;
 use App\Modules\User\Repositories\UserRepositoryInterface;
 use Exception;
-use Google_Client;
-use Google_Service_Oauth2;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Crypt;
 
@@ -47,7 +45,7 @@ class UserService
     public function completeUserData(CompleteUserDataDTO $dto): User
     {
         $temporaryUser = TemporaryUser::notExpired()
-            ->where('email', $this->getEmailFromToken($dto->google_token))
+            ->where('email', $dto->email)
             ->first();
 
         if (!$temporaryUser) {
@@ -67,20 +65,5 @@ class UserService
         $temporaryUser->delete();
 
         return $user;
-    }
-
-    /**
-     * Retorna o e-mail do usuário autenticado com base no token do Google.
-     *
-     */
-    protected function getEmailFromToken(string $token): string
-    {
-        $client = new Google_Client();
-        $client->setAccessToken($token);
-
-        $oauth = new Google_Service_Oauth2($client);
-        $info  = $oauth->userinfo->get();
-
-        return $info->email;
     }
 }

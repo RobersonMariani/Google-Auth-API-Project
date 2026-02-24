@@ -5,12 +5,9 @@ namespace Tests\Feature\Modules\Controller;
 use App\Modules\User\Enums\UserMessagesEnum;
 use App\Modules\User\Models\TemporaryUser;
 use App\Modules\User\Models\User;
-use App\Modules\User\Repositories\UserRepositoryInterface;
-use App\Modules\User\Services\UserService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Laravel\Sanctum\Sanctum;
-use Mockery;
 use Tests\TestCase;
 
 class UserControllerTest extends TestCase
@@ -77,20 +74,12 @@ class UserControllerTest extends TestCase
             'expires_at'   => now()->addMinutes(15),
         ]);
 
-        $repository = app(UserRepositoryInterface::class);
-
-        /** @var UserService&\Mockery\MockInterface $mock */
-        $mock = Mockery::mock(UserService::class, [$repository])->makePartial();
-        $mock->shouldAllowMockingProtectedMethods();
-        $mock->allows(['getEmailFromToken' => $email]);
-        $this->app->instance(UserService::class, $mock);
-
         // Act
         $response = $this->postJson('/api/users/complete', [
-            'name'         => 'Novo Usuário',
-            'cpf'          => '52998224725',
-            'birth_date'   => '1999-12-31',
-            'google_token' => $token,
+            'name'       => 'Novo Usuário',
+            'cpf'        => '52998224725',
+            'birth_date' => '1999-12-31',
+            'email'      => $email,
         ]);
 
         // Assert
@@ -105,10 +94,10 @@ class UserControllerTest extends TestCase
 
         // Act
         $response = $this->postJson('/api/users/complete', [
-            'name'         => 'Teste',
-            'cpf'          => '11122233344',
-            'birth_date'   => '1995-06-15',
-            'google_token' => 'some-token',
+            'name'       => 'Teste',
+            'cpf'        => '11122233344',
+            'birth_date' => '1995-06-15',
+            'email'      => 'test@example.com',
         ]);
 
         // Assert
@@ -122,10 +111,10 @@ class UserControllerTest extends TestCase
 
         // Act
         $response = $this->postJson('/api/users/complete', [
-            'name'         => 'Teste',
-            'cpf'          => '11111111111',
-            'birth_date'   => '1995-06-15',
-            'google_token' => 'some-token',
+            'name'       => 'Teste',
+            'cpf'        => '11111111111',
+            'birth_date' => '1995-06-15',
+            'email'      => 'test@example.com',
         ]);
 
         // Assert
@@ -140,10 +129,10 @@ class UserControllerTest extends TestCase
 
         // Act
         $response = $this->postJson('/api/users/complete', [
-            'name'         => 'Teste',
-            'cpf'          => '52998224725',
-            'birth_date'   => $futureDate,
-            'google_token' => 'some-token',
+            'name'       => 'Teste',
+            'cpf'        => '52998224725',
+            'birth_date' => $futureDate,
+            'email'      => 'test@example.com',
         ]);
 
         // Assert
@@ -160,7 +149,7 @@ class UserControllerTest extends TestCase
 
         // Assert
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['name', 'cpf', 'birth_date', 'google_token']);
+            ->assertJsonValidationErrors(['name', 'cpf', 'birth_date', 'email']);
     }
 
     public function testCompleteResponseUsesResourceFormat(): void
@@ -176,20 +165,12 @@ class UserControllerTest extends TestCase
             'expires_at'   => now()->addMinutes(15),
         ]);
 
-        $repository = app(UserRepositoryInterface::class);
-
-        /** @var UserService&\Mockery\MockInterface $mock */
-        $mock = Mockery::mock(UserService::class, [$repository])->makePartial();
-        $mock->shouldAllowMockingProtectedMethods();
-        $mock->allows(['getEmailFromToken' => $email]);
-        $this->app->instance(UserService::class, $mock);
-
         // Act
         $response = $this->postJson('/api/users/complete', [
-            'name'         => 'Resource Test',
-            'cpf'          => '52998224725',
-            'birth_date'   => '1990-01-01',
-            'google_token' => $token,
+            'name'       => 'Resource Test',
+            'cpf'        => '52998224725',
+            'birth_date' => '1990-01-01',
+            'email'      => $email,
         ]);
 
         // Assert

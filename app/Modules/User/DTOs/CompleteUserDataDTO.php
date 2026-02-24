@@ -8,7 +8,7 @@ namespace App\Modules\User\DTOs;
  * @property-read string $name
  * @property-read string $cpf
  * @property-read string $birth_date
- * @property-read string $google_token
+ * @property-read string $email
  */
 readonly class CompleteUserDataDTO
 {
@@ -16,7 +16,7 @@ readonly class CompleteUserDataDTO
         public string $name,
         public string $cpf,
         public string $birth_date,
-        public string $google_token
+        public string $email
     ) {
     }
 }

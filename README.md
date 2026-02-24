@@ -81,10 +81,13 @@ app/
 - ✅ Tokens do Google criptografados com `Crypt` do Laravel
 - ✅ E-mail de confirmação de cadastro via Job assíncrono (3 tentativas, timeout de 30s)
 - ✅ Registro de logs de envio de e-mails (`MailLog`)
+- ✅ Validação de e-mail único por cadastro (impede duplicidade)
+- ✅ Token Sanctum retornado na resposta de cadastro para autenticação imediata
 - ✅ Listagem de usuários autenticada com filtros paginados (nome e CPF, máximo 100 por página)
 - ✅ Limpeza automática de registros temporários expirados (`artisan temporary-users:cleanup`)
 - ✅ Soft delete nos usuários
 - ✅ API RESTful estruturada com API Resources
+- ✅ CORS configurado para integração com frontend
 
 ---
 
@@ -296,7 +299,7 @@ Body:
   "name": "João Silva",
   "cpf": "529.982.247-25",
   "birth_date": "1990-01-15",
-  "google_token": "ya29.a0AfH6SMB..."
+  "email": "joao@gmail.com"
 }
 ```
 
@@ -305,7 +308,7 @@ Body:
 | `name`         | string | sim         | max: 255                                         |
 | `cpf`          | string | sim         | max: 14, validação de dígitos verificadores      |
 | `birth_date`   | string | sim         | formato date, anterior a hoje, posterior a 1900   |
-| `google_token` | string | sim         | token Google válido                              |
+| `email`        | string | sim         | formato email válido, único no sistema           |
 
 Resposta:
 ```json
@@ -318,16 +321,17 @@ Resposta:
     "birth_date": "1990-01-15",
     "created_at": "2025-04-13T00:00:00.000000Z",
     "updated_at": "2025-04-13T00:00:00.000000Z"
-  }
+  },
+  "token": "1|abc123def456..."
 }
 ```
 
 | Status | Descrição |
 |--------|-----------|
-| `201`  | Usuário criado com sucesso |
-| `422`  | Erro de validação (CPF inválido, data futura, campos faltando) |
+| `201`  | Usuário criado com sucesso (inclui token Sanctum) |
+| `422`  | Erro de validação (CPF inválido, data futura, campos faltando, email duplicado) |
 | `429`  | Rate limit excedido |
-| `500`  | Token inválido ou usuário temporário não encontrado/expirado |
+| `500`  | Usuário temporário não encontrado ou expirado |
 
 ---
 
@@ -513,10 +517,10 @@ docker compose exec app php artisan temporary-users:cleanup
 │          │     5. POST /api/users/complete       │          │
 │          │ ──────────────────────────────────▶   │          │
 │          │        { name, cpf, birth_date,       │          │
-│          │          google_token }               │          │
+│          │          email }                      │          │
 │          │                                       │          │
 │          │     6. Usuário criado + e-mail enviado│          │
-│          │     ◀── 201 { user }                  │          │
+│          │     ◀── 201 { user, token }           │          │
 └──────────┘                                       └──────────┘
 ```
 
