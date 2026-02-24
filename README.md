@@ -18,7 +18,7 @@ Este projeto é uma API RESTful desenvolvida com **Laravel 12** para autenticaç
 - PHP-CS-Fixer (PSR-12)
 - PSR-4 Autoload
 - Princípios SOLID
-- Design Patterns (Repository, DTO, Service)
+- Design Patterns (Repository, DTO, Service, Resource)
 
 ---
 
@@ -33,6 +33,8 @@ app/
 │   └── AppServiceProvider.php
 └── Modules/
     └── User/
+        ├── Commands/
+        │   └── CleanExpiredTemporaryUsersCommand.php
         ├── Controllers/
         │   ├── GoogleAuthController.php
         │   └── UserController.php
@@ -53,6 +55,10 @@ app/
         │   └── UserRepositoryInterface.php
         ├── Requests/
         │   └── CompleteUserRequest.php
+        ├── Resources/
+        │   └── UserResource.php
+        ├── Rules/
+        │   └── CpfRule.php
         ├── Services/
         │   ├── GoogleAuthService.php
         │   └── UserService.php
@@ -66,48 +72,130 @@ app/
 
 - ✅ Autenticação via Google OAuth 2.0 (login social)
 - ✅ Cadastro em duas etapas (login Google → complemento de dados)
-- ✅ Armazenamento temporário de usuários pré-cadastro (`TemporaryUser`)
+- ✅ Armazenamento temporário de usuários pré-cadastro (`TemporaryUser`) com expiração de 15 minutos
 - ✅ Finalização de cadastro com nome, CPF e data de nascimento
+- ✅ Validação de CPF com dígitos verificadores (regra customizada `CpfRule`)
+- ✅ Validação de data de nascimento (não pode ser futura)
 - ✅ Tokens do Google criptografados com `Crypt` do Laravel
-- ✅ CPF com validação e sanitização (remoção de formatação)
-- ✅ E-mail de confirmação de cadastro via Job assíncrono
+- ✅ E-mail de confirmação de cadastro via Job assíncrono (3 tentativas, timeout de 30s)
 - ✅ Registro de logs de envio de e-mails (`MailLog`)
-- ✅ Listagem de usuários com filtros paginados (nome e CPF)
+- ✅ Listagem de usuários autenticada com filtros paginados (nome e CPF, máximo 100 por página)
+- ✅ Limpeza automática de registros temporários expirados (`artisan temporary-users:cleanup`)
 - ✅ Soft delete nos usuários
-- ✅ API RESTful estruturada
+- ✅ API RESTful estruturada com API Resources
+
+---
+
+## 🛡️ Segurança
+
+- ✅ Rotas protegidas com `auth:sanctum` (listagem de usuários)
+- ✅ Rate limiting: 10 req/min para autenticação, 5 req/min para cadastro, 60 req/min geral
+- ✅ Tokens sensíveis criptografados com `Crypt`
+- ✅ Erros internos não expostos ao cliente (mensagens genéricas via Enum)
+- ✅ `env()` utilizado apenas em arquivos de config (compatível com `config:cache`)
+- ✅ API Resource controlando campos retornados (sem expor `google_token`, `google_email`, `deleted_at`)
+- ✅ Expiração de 15 minutos para usuários temporários
+- ✅ Headers de segurança no Nginx (X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Referrer-Policy)
+- ✅ Usuário não-root nos containers Docker
+- ✅ Email codificado com `urlencode()` na URL de redirect
 
 ---
 
 ## 🧪 Testes Automatizados
 
-### Testes de Feature
+**56 testes** com **136 assertions**, todos no padrão **AAA** (Arrange / Act / Assert).
 
-**Controllers:**
-- Geração da URL de login do Google
-- Callback do Google armazenando usuário temporário
-- Listagem de usuários retornando dados corretos
-- Finalização de cadastro criando usuário a partir de dados temporários
+### Controllers (13 testes)
 
-**Services:**
-- `GoogleAuthService` — criação de `TemporaryUser` a partir do callback
-- `UserService` — finalização de cadastro com DTO e listagem com filtros
+**GoogleAuthController:**
+- URL de login retorna URL válida
+- Callback armazena usuário temporário e redireciona
+- Callback sem código retorna 400
+- Callback com código vazio retorna 400
+- Callback com erro retorna mensagem genérica (sem vazar detalhes internos)
 
-**Repositories:**
-- Criação de usuário
-- Busca por e-mail do Google
-- Atualização de dados
-- Filtragem por nome e CPF com paginação
+**UserController:**
+- Listagem retorna dados para usuário autenticado
+- Listagem sem autenticação retorna 401
+- Listagem não expõe `google_token` nem `google_email`
+- Cadastro completo cria usuário a partir do temporário
+- CPF inválido retorna 422
+- CPF com dígitos repetidos retorna 422
+- Data de nascimento futura retorna 422
+- Campos obrigatórios faltando retorna 422
+- Resposta usa formato do Resource (sem dados sensíveis)
+
+### Services (11 testes)
+
+**GoogleAuthService:**
+- Callback cria usuário temporário
+- Callback atualiza usuário temporário existente
+- Callback define tempo de expiração
+- Token inválido lança exceção
+- Token expirado lança exceção
+
+**UserService:**
+- Cadastro completo cria usuário a partir do temporário
+- Cadastro completo deleta usuário temporário após criação
+- Temporário expirado lança exceção
+- Temporário inexistente lança exceção
+- Listagem com filtros retorna resultados corretos
+- Listagem sem filtros retorna todos
+
+### Repositories (10 testes)
+
+- Criação de usuário persiste no banco
+- Busca por e-mail do Google retorna usuário
+- Busca por e-mail inexistente retorna null
+- Atualização de dados altera atributos
+- Filtragem apenas por nome
+- Filtragem apenas por CPF
+- Filtragem por nome e CPF
+- Filtragem sem resultados retorna vazio
+- Filtragem exclui soft deleted
+- Resultados ordenados por ID decrescente
+
+### Unitários (18 testes)
+
+**CpfRule:**
+- CPF válido (somente dígitos)
+- CPF válido (com formatação)
+- Outro CPF válido
+- CPF com dígitos verificadores errados
+- Todos os dígitos repetidos (10 variantes)
+- Menos de 11 dígitos
+- Mais de 11 dígitos
+- String vazia
+- Valor não-string
+- CPF com letras
+
+**UserFilterDTO:**
+- Construtor remove formatação do CPF
+- Construtor mantém CPF null
+- fromRequest com valores padrão
+- fromRequest com todos os parâmetros
+- `per_page` limitado a 100
+- `per_page` mínimo é 1
+- `per_page` negativo é clampado
+- `per_page` não-numérico usa padrão
+
+### Commands (3 testes)
+
+**CleanExpiredTemporaryUsersCommand:**
+- Remove registros expirados e preserva válidos
+- Sem expirados não deleta nada
+- Tabela vazia roda sem erro
 
 ### Executando os testes
 
 ```bash
-php artisan test
+docker compose exec app php artisan test
 ```
 
 Rodar um teste específico:
 
 ```bash
-php artisan test --filter=GoogleAuthControllerTest
+docker compose exec app php artisan test --filter=GoogleAuthControllerTest
 ```
 
 ---
@@ -122,6 +210,8 @@ php artisan test --filter=GoogleAuthControllerTest
 GET /api/google/login-url
 ```
 
+Middleware: `throttle:auth` (10 req/min)
+
 Resposta:
 ```json
 {
@@ -132,6 +222,7 @@ Resposta:
 | Status | Descrição |
 |--------|-----------|
 | `200`  | URL gerada com sucesso |
+| `429`  | Rate limit excedido |
 
 ---
 
@@ -141,10 +232,13 @@ Resposta:
 GET /api/google/callback?code={authorization_code}
 ```
 
+Middleware: `throttle:auth` (10 req/min)
+
 | Status | Descrição |
 |--------|-----------|
 | `302`  | Redireciona para `FRONT_CALLBACK_URL/register?email={email}` |
 | `400`  | Código de autorização inválido |
+| `429`  | Rate limit excedido |
 | `500`  | Falha na autenticação com o Google |
 
 ---
@@ -157,33 +251,32 @@ GET /api/google/callback?code={authorization_code}
 GET /api/users?name={nome}&cpf={cpf}&per_page={quantidade}&page={pagina}
 ```
 
-Todos os query params são opcionais. Resposta:
+Middleware: `auth:sanctum`
+
+Todos os query params são opcionais. `per_page` aceita valores entre 1 e 100 (padrão: 20).
+
+Resposta:
 
 ```json
 {
   "message": "Lista de usuários carregada com sucesso.",
-  "data": {
-    "current_page": 1,
-    "data": [
-      {
-        "id": 1,
-        "name": "João Silva",
-        "cpf": "12345678900",
-        "birth_date": "1990-01-15",
-        "google_email": "joao@gmail.com",
-        "created_at": "2025-04-13T00:00:00.000000Z",
-        "updated_at": "2025-04-13T00:00:00.000000Z"
-      }
-    ],
-    "per_page": 20,
-    "total": 1
-  }
+  "data": [
+    {
+      "id": 1,
+      "name": "João Silva",
+      "cpf": "12345678900",
+      "birth_date": "1990-01-15",
+      "created_at": "2025-04-13T00:00:00.000000Z",
+      "updated_at": "2025-04-13T00:00:00.000000Z"
+    }
+  ]
 }
 ```
 
 | Status | Descrição |
 |--------|-----------|
 | `200`  | Lista retornada com sucesso |
+| `401`  | Não autenticado |
 
 ---
 
@@ -193,22 +286,24 @@ Todos os query params são opcionais. Resposta:
 POST /api/users/complete
 ```
 
+Middleware: `throttle:registration` (5 req/min)
+
 Body:
 ```json
 {
   "name": "João Silva",
-  "cpf": "123.456.789-00",
+  "cpf": "529.982.247-25",
   "birth_date": "1990-01-15",
   "google_token": "ya29.a0AfH6SMB..."
 }
 ```
 
-| Campo          | Tipo   | Obrigatório | Regras             |
-|----------------|--------|-------------|--------------------|
-| `name`         | string | sim         | max: 255           |
-| `cpf`          | string | sim         | max: 14            |
-| `birth_date`   | string | sim         | formato: date      |
-| `google_token` | string | sim         | token válido       |
+| Campo          | Tipo   | Obrigatório | Regras                                          |
+|----------------|--------|-------------|--------------------------------------------------|
+| `name`         | string | sim         | max: 255                                         |
+| `cpf`          | string | sim         | max: 14, validação de dígitos verificadores      |
+| `birth_date`   | string | sim         | formato date, anterior a hoje, posterior a 1900   |
+| `google_token` | string | sim         | token Google válido                              |
 
 Resposta:
 ```json
@@ -217,9 +312,8 @@ Resposta:
   "data": {
     "id": 1,
     "name": "João Silva",
-    "cpf": "12345678900",
+    "cpf": "52998224725",
     "birth_date": "1990-01-15",
-    "google_email": "joao@gmail.com",
     "created_at": "2025-04-13T00:00:00.000000Z",
     "updated_at": "2025-04-13T00:00:00.000000Z"
   }
@@ -229,8 +323,9 @@ Resposta:
 | Status | Descrição |
 |--------|-----------|
 | `201`  | Usuário criado com sucesso |
-| `422`  | Erro de validação |
-| `500`  | Token inválido ou usuário temporário não encontrado |
+| `422`  | Erro de validação (CPF inválido, data futura, campos faltando) |
+| `429`  | Rate limit excedido |
+| `500`  | Token inválido ou usuário temporário não encontrado/expirado |
 
 ---
 
@@ -239,6 +334,8 @@ Resposta:
 ```
 GET /api/user
 ```
+
+Middleware: `auth:sanctum`
 
 | Status | Descrição |
 |--------|-----------|
@@ -298,7 +395,7 @@ docker compose exec app php artisan migrate
 1. **Clone o repositório:**
 
 ```bash
-git clone https://github.com/seu-usuario/Google-Auth-API-Project.git
+git clone https://github.com/RobersonMariani/Google-Auth-API-Project.git
 cd Google-Auth-API-Project
 ```
 
@@ -347,6 +444,7 @@ docker compose exec app php artisan test
 - ✅ PHPStan nível **9** (máximo) configurado
 - ✅ PHP-CS-Fixer com padrão **PSR-12**
 - ✅ Código totalmente tipado com suporte a análise por IDEs
+- ✅ 56 testes automatizados com 136 assertions no padrão AAA
 
 ### Comandos de qualidade
 
@@ -359,6 +457,9 @@ composer cs:check
 
 # Corrigir estilo de código automaticamente
 composer cs:fix
+
+# Limpar usuários temporários expirados
+docker compose exec app php artisan temporary-users:cleanup
 ```
 
 ---
@@ -368,15 +469,22 @@ composer cs:fix
 - ✅ Código limpo e modularizado
 - ✅ Princípios SOLID aplicados
 - ✅ Padrões PSR-4 e PSR-12
-- ✅ Testes automatizados (controllers, services e repositories)
-- ✅ Uso de DTOs, Services e Repositories
+- ✅ 56 testes automatizados no padrão AAA (unitários + feature)
+- ✅ Uso de DTOs, Services, Repositories e Resources
+- ✅ Validação de CPF com dígitos verificadores (regra customizada)
+- ✅ Rate limiting por tipo de rota (auth, registration, api)
+- ✅ Rotas protegidas com Laravel Sanctum
+- ✅ Expiração de usuários temporários com command de cleanup
 - ✅ Tokens sensíveis criptografados com `Crypt`
-- ✅ Job assíncrono para envio de e-mails
+- ✅ Erros internos não vazam para o cliente
+- ✅ Job assíncrono com retries e método `failed()`
 - ✅ Logs de envio de e-mails (`MailLog`)
+- ✅ API Resource controlando campos expostos
 - ✅ Docker com multi-stage build e Xdebug para desenvolvimento
 - ✅ Healthcheck no PostgreSQL
 - ✅ Headers de segurança no Nginx
 - ✅ Usuário não-root nos containers
+- ✅ Índices de performance no banco de dados
 - ✅ Documentação clara e detalhada
 
 ---
@@ -385,25 +493,25 @@ composer cs:fix
 
 ```
 ┌──────────┐     1. GET /api/google/login-url     ┌──────────┐
-│          │ ──────────────────────────────────▶   │          │
-│ Frontend │     ◀── { url: "..." }                │   API    │
+│          │ ──────────────────────────────────▶  │          │
+│ Frontend │     ◀── { url: "..." }               │   API    │
 │          │                                       │  Laravel │
-│          │     2. Usuário faz login no Google     │          │
-│          │ ──────────────────────────────────▶   │          │
+│          │     2. Usuário faz login no Google    │          │
+│          │ ──────────────────────────────────▶  │          │
 │          │                                       │          │
-│          │     3. Google redireciona para         │          │
-│          │        /api/google/callback?code=...   │          │
+│          │     3. Google redireciona para        │          │
+│          │        /api/google/callback?code=...  │          │
 │          │                                       │          │
-│          │     4. API salva TemporaryUser e       │          │
-│          │        redireciona para o front        │          │
+│          │     4. API salva TemporaryUser e      │          │
+│          │        redireciona para o front       │          │
 │          │     ◀── 302 /register?email=...       │          │
 │          │                                       │          │
-│          │     5. POST /api/users/complete        │          │
+│          │     5. POST /api/users/complete       │          │
 │          │ ──────────────────────────────────▶   │          │
-│          │        { name, cpf, birth_date,        │          │
-│          │          google_token }                │          │
+│          │        { name, cpf, birth_date,       │          │
+│          │          google_token }               │          │
 │          │                                       │          │
-│          │     6. Usuário criado + e-mail enviado │          │
+│          │     6. Usuário criado + e-mail enviado│          │
 │          │     ◀── 201 { user }                  │          │
 └──────────┘                                       └──────────┘
 ```
@@ -414,4 +522,4 @@ composer cs:fix
 
 **Roberson Mariani**
 Desenvolvedor Fullstack PHP & Laravel | JS e VueJS
-[LinkedIn](https://linkedin.com/in/robersonmariani) | [GitHub](https://github.com/RobersonMariani)
+[LinkedIn](https://linkedin.com/in/roberson-mariani) | [GitHub](https://github.com/RobersonMariani)

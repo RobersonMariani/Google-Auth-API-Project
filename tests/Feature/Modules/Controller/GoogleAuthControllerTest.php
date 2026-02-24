@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Modules\Controller;
 
+use App\Modules\User\Enums\AuthMessagesEnum;
 use App\Modules\User\Models\TemporaryUser;
+use App\Modules\User\Services\GoogleAuthService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Tests\TestCase;
@@ -11,58 +13,90 @@ class GoogleAuthControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     * Testa se a rota de geração da URL de login com o Google
-     * retorna uma URL válida no formato esperado.
-     */
     public function testLoginUrlReturnsValidUrl(): void
     {
-        // Cria um mock parcial do serviço de autenticação com Google
-        // Simula o retorno de uma URL falsa para autenticação
-        $this->partialMock(\App\Modules\User\Services\GoogleAuthService::class, function ($mock) {
-            $mock->shouldReceive('generateLoginUrl')->andReturn('https://fake.google.auth.url');
+        // Arrange
+        $this->partialMock(GoogleAuthService::class, function ($mock) {
+            $mock->shouldReceive('generateLoginUrl')
+                ->andReturn('https://accounts.google.com/o/oauth2/v2/auth?fake');
         });
 
-        // Faz a requisição à rota da API que retorna a URL de login
+        // Act
         $response = $this->getJson('/api/google/login-url');
 
-        // Verifica se a resposta tem status 200 e contém a chave "url"
+        // Assert
         $response->assertStatus(200)
-            ->assertJsonStructure(['url']);
+            ->assertJsonStructure(['url'])
+            ->assertJsonFragment(['url' => 'https://accounts.google.com/o/oauth2/v2/auth?fake']);
     }
 
-    /**
-     * Testa se o callback da autenticação com o Google
-     * armazena corretamente um TemporaryUser no banco de dados
-     * e redireciona o usuário com o e-mail como parâmetro.
-     */
-    public function testCallbackStoresTemporaryUser(): void
+    public function testCallbackStoresTemporaryUserAndRedirects(): void
     {
-        // Dados simulados do usuário retornado pelo Google
+        // Arrange
         $email    = 'callback@test.com';
         $token    = 'mocked-token';
         $googleId = 'mock-id';
 
-        // Cria um mock parcial do serviço de autenticação
-        // Simula o método handleCallback retornando um usuário temporário salvo
-        $this->partialMock(\App\Modules\User\Services\GoogleAuthService::class, function ($mock) use ($email, $googleId, $token) {
+        $this->partialMock(GoogleAuthService::class, function ($mock) use ($email, $googleId, $token) {
             $mock->shouldAllowMockingProtectedMethods();
             $mock->shouldReceive('handleCallback')->andReturn(
                 TemporaryUser::create([
                     'email'        => $email,
                     'google_id'    => Crypt::encryptString($googleId),
                     'google_token' => Crypt::encryptString($token),
+                    'expires_at'   => now()->addMinutes(15),
                 ])
             );
         });
 
-        // Simula a requisição de callback com o código de autorização do Google
+        // Act
         $response = $this->get('/api/google/callback?code=valid-code');
 
-        // Verifica se o redirecionamento contém o e-mail como parâmetro
-        $response->assertRedirectContains('?email=' . $email);
-
-        // Verifica se o usuário temporário foi salvo corretamente no banco
+        // Assert
+        $response->assertRedirectContains('?email=' . urlencode($email));
         $this->assertDatabaseHas('temporary_users', ['email' => $email]);
+    }
+
+    public function testCallbackWithoutCodeReturns400(): void
+    {
+        // Arrange — nenhum código na query string
+
+        // Act
+        $response = $this->getJson('/api/google/callback');
+
+        // Assert
+        $response->assertStatus(400)
+            ->assertJsonFragment(['error' => 'Código inválido']);
+    }
+
+    public function testCallbackWithEmptyCodeReturns400(): void
+    {
+        // Arrange
+        $code = '';
+
+        // Act
+        $response = $this->getJson('/api/google/callback?code=' . $code);
+
+        // Assert
+        $response->assertStatus(400)
+            ->assertJsonFragment(['error' => 'Código inválido']);
+    }
+
+    public function testCallbackWithServiceErrorReturnsGenericMessage(): void
+    {
+        // Arrange
+        $this->partialMock(GoogleAuthService::class, function ($mock) {
+            $mock->shouldAllowMockingProtectedMethods();
+            $mock->shouldReceive('handleCallback')
+                ->andThrow(new \Exception('Internal sensitive error details'));
+        });
+
+        // Act
+        $response = $this->getJson('/api/google/callback?code=invalid-code');
+
+        // Assert
+        $response->assertStatus(500)
+            ->assertJsonFragment(['error' => AuthMessagesEnum::INTEGRATION_ERROR->value])
+            ->assertJsonMissing(['message' => 'Internal sensitive error details']);
     }
 }

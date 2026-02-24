@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Modules\Repositories;
 
-use App\Modules\User\DTOs\UserFilterDTO;
 use App\Modules\User\Models\User;
 use App\Modules\User\Repositories\UserRepository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -13,99 +12,154 @@ class UserRepositoryTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @var UserRepository */
-    protected $repository;
+    protected UserRepository $repository;
 
-    /**
-     * Inicializa o repositório antes de cada teste.
-     */
     protected function setUp(): void
     {
         parent::setUp();
         $this->repository = new UserRepository();
     }
 
-    /**
-     * Testa o método create() do repositório.
-     * Verifica se um usuário é criado corretamente no banco de dados.
-     */
-    public function testCreateUser(): void
+    public function testCreateUserPersistsInDatabase(): void
     {
-        $user = $this->repository->create([
+        // Arrange
+        $data = [
             'name'         => 'Repo Teste',
             'cpf'          => '11122233344',
             'birth_date'   => '1990-01-01',
             'google_email' => 'repo@teste.com',
             'google_token' => 'encrypted-token',
-        ]);
+        ];
 
-        $this->assertDatabaseHas('users', [
-            'google_email' => 'repo@teste.com',
-            'cpf'          => '11122233344',
-        ]);
+        // Act
+        $user = $this->repository->create($data);
 
+        // Assert
         $this->assertInstanceOf(User::class, $user);
+        $this->assertDatabaseHas('users', ['google_email' => 'repo@teste.com', 'cpf' => '11122233344']);
     }
 
-    /**
-     * Testa o método findByGoogleEmail() do repositório.
-     * Verifica se é possível encontrar um usuário pelo e-mail do Google.
-     */
-    public function testFindByGoogleEmail(): void
+    public function testFindByGoogleEmailReturnsUser(): void
     {
-        $user = User::factory()->create([
-            'google_email' => 'find@teste.com',
-        ]);
+        // Arrange
+        $user = User::factory()->create(['google_email' => 'find@teste.com']);
 
+        // Act
         $found = $this->repository->findByGoogleEmail('find@teste.com');
 
+        // Assert
         $this->assertNotNull($found);
         $this->assertEquals($user->id, $found->id);
     }
 
-    /**
-     * Testa o método update() do repositório.
-     * Verifica se os dados de um usuário são atualizados corretamente.
-     */
-    public function testUpdateUser(): void
+    public function testFindByGoogleEmailReturnsNullWhenNotFound(): void
     {
-        $user = User::factory()->create();
+        // Arrange — banco vazio
 
-        $this->assertInstanceOf(User::class, $user);
+        // Act
+        $found = $this->repository->findByGoogleEmail('nonexistent@teste.com');
 
-        $updated = $this->repository->update($user, [
-            'name' => 'Novo Nome',
-            'cpf'  => '88899900077',
-        ]);
-
-        $this->assertEquals('Novo Nome', $updated->name);
-        $this->assertEquals('88899900077', $updated->cpf);
+        // Assert
+        $this->assertNull($found);
     }
 
-    /**
-     * Testa o método getUsersFilteredByNameOrCpf() com filtros por nome e CPF.
-     * Verifica se os filtros aplicados retornam os dados esperados.
-     */
-    public function testGetUsersFilteredByNameOrCpfWithNameAndCpf(): void
+    public function testUpdateUserChangesAttributes(): void
     {
-        User::factory()->create(['name' => 'FiltroNome', 'cpf' => '12345678900']);
+        // Arrange
+        $user = User::factory()->create(['name' => 'Nome Original', 'cpf' => '11111111111']);
 
-        $dto = new UserFilterDTO(
-            name: 'FiltroNome',
-            cpf: '123.456.789-00',
-            perPage: 20
-        );
+        // Act
+        $updated = $this->repository->update($user, ['name' => 'Novo Nome', 'cpf' => '88899900077']);
 
-        $results = $this->repository->getUsersFilteredByNameOrCpf($dto->name, $dto->cpf, $dto->perPage);
+        // Assert
+        $this->assertEquals('Novo Nome', $updated->name);
+        $this->assertEquals('88899900077', $updated->cpf);
+        $this->assertDatabaseHas('users', ['id' => $user->id, 'name' => 'Novo Nome']);
+    }
 
+    public function testFilterByNameOnly(): void
+    {
+        // Arrange
+        User::factory()->create(['name' => 'Maria Silva']);
+        User::factory()->create(['name' => 'João Santos']);
+
+        // Act
+        $results = $this->repository->getUsersFilteredByNameOrCpf('Maria', null, 20);
+
+        // Assert
         $this->assertInstanceOf(LengthAwarePaginator::class, $results);
-        $this->assertGreaterThan(0, $results->total());
+        $this->assertCount(1, $results->items());
+        $this->assertEquals('Maria Silva', $results->items()[0]->name);
+    }
 
-        $items = $results->items();
-        $this->assertNotEmpty($items);
+    public function testFilterByCpfOnly(): void
+    {
+        // Arrange
+        User::factory()->create(['cpf' => '12345678900']);
+        User::factory()->create(['cpf' => '98765432100']);
 
-        $firstUser = $items[0];
-        $this->assertInstanceOf(User::class, $firstUser);
-        $this->assertEquals('FiltroNome', $firstUser->name);
+        // Act
+        $results = $this->repository->getUsersFilteredByNameOrCpf(null, '12345678900', 20);
+
+        // Assert
+        $this->assertCount(1, $results->items());
+        $this->assertEquals('12345678900', $results->items()[0]->cpf);
+    }
+
+    public function testFilterByNameAndCpf(): void
+    {
+        // Arrange
+        User::factory()->create(['name' => 'FiltroNome', 'cpf' => '12345678900']);
+        User::factory()->create(['name' => 'FiltroNome', 'cpf' => '99988877766']);
+
+        // Act
+        $results = $this->repository->getUsersFilteredByNameOrCpf('FiltroNome', '12345678900', 20);
+
+        // Assert
+        $this->assertCount(1, $results->items());
+        $this->assertEquals('12345678900', $results->items()[0]->cpf);
+    }
+
+    public function testFilterWithNoResultsReturnsEmpty(): void
+    {
+        // Arrange
+        User::factory()->create(['name' => 'João']);
+
+        // Act
+        $results = $this->repository->getUsersFilteredByNameOrCpf('NomeInexistente', null, 20);
+
+        // Assert
+        $this->assertCount(0, $results->items());
+        $this->assertEquals(0, $results->total());
+    }
+
+    public function testFilterExcludesSoftDeletedUsers(): void
+    {
+        // Arrange
+        $user = User::factory()->create(['name' => 'Deletado']);
+        $user->delete();
+        User::factory()->create(['name' => 'Ativo']);
+
+        // Act
+        $results = $this->repository->getUsersFilteredByNameOrCpf(null, null, 20);
+
+        // Assert
+        $this->assertCount(1, $results->items());
+        $this->assertEquals('Ativo', $results->items()[0]->name);
+    }
+
+    public function testFilterReturnsOrderedByIdDesc(): void
+    {
+        // Arrange
+        $first  = User::factory()->create(['name' => 'Primeiro']);
+        $second = User::factory()->create(['name' => 'Segundo']);
+
+        // Act
+        $results = $this->repository->getUsersFilteredByNameOrCpf(null, null, 20);
+        $items   = $results->items();
+
+        // Assert
+        $this->assertCount(2, $items);
+        $this->assertTrue($items[0]->id > $items[1]->id);
     }
 }
