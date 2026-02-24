@@ -20,9 +20,10 @@ class TemporaryUserFactory extends Factory
     public function definition(): array
     {
         return [
-            'email' => $this->faker->unique()->safeEmail,
-            'google_id' => $this->faker->uuid,
+            'email'      => $this->faker->unique()->safeEmail,
+            'google_id'  => $this->faker->uuid,
             'google_token' => $this->faker->uuid,
+            'expires_at' => now()->addMinutes(15),
         ];
     }
 }
