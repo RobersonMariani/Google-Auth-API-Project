@@ -66,6 +66,7 @@ class TemporaryUser extends Model
      * Filtra apenas registros não expirados.
      *
      * @param Builder<self> $query
+     *
      * @return Builder<self>
      */
     public function scopeNotExpired(Builder $query): Builder

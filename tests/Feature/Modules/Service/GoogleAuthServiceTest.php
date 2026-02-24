@@ -23,9 +23,9 @@ class GoogleAuthServiceTest extends TestCase
             'fetchAccessTokenWithAuthCode' => $invalidToken
                 ? ['error' => 'invalid_grant']
                 : ['access_token' => $accessToken],
-            'setAccessToken'               => null,
-            'isAccessTokenExpired'         => $expired,
-            'getLogger'                    => new class () {
+            'setAccessToken'       => null,
+            'isAccessTokenExpired' => $expired,
+            'getLogger'            => new class () {
                 public function info(): void
                 {
                 }
