@@ -43,6 +43,8 @@ app/
         │   └── UserFilterDTO.php
         ├── Enums/
         │   ├── AuthMessagesEnum.php
+        │   ├── EmailMessagesEnum.php
+        │   ├── MailLogStatusEnum.php
         │   └── UserMessagesEnum.php
         ├── Jobs/
         │   └── SendRegistrationEmailJob.php
@@ -103,7 +105,7 @@ app/
 
 ## 🧪 Testes Automatizados
 
-**56 testes** com **136 assertions**, todos no padrão **AAA** (Arrange / Act / Assert).
+**56 testes** com **137 assertions**, todos no padrão **AAA** (Arrange / Act / Assert).
 
 ### Controllers (13 testes)
 
@@ -236,7 +238,7 @@ Middleware: `throttle:auth` (10 req/min)
 
 | Status | Descrição |
 |--------|-----------|
-| `302`  | Redireciona para `FRONT_CALLBACK_URL/register?email={email}` |
+| `302`  | Redireciona para `FRONT_CALLBACK_URL` + `FRONT_REGISTER_PATH` + `?email={email}` |
 | `400`  | Código de autorização inválido |
 | `429`  | Rate limit excedido |
 | `500`  | Falha na autenticação com o Google |
@@ -412,6 +414,7 @@ GOOGLE_CLIENT_ID=seu-client-id
 GOOGLE_CLIENT_SECRET=seu-client-secret
 GOOGLE_REDIRECT_URI=http://localhost:8000/api/google/callback
 FRONT_CALLBACK_URL=http://localhost:5173
+FRONT_REGISTER_PATH=/register
 ```
 
 3. **Suba os containers:**
@@ -444,7 +447,7 @@ docker compose exec app php artisan test
 - ✅ PHPStan nível **9** (máximo) configurado
 - ✅ PHP-CS-Fixer com padrão **PSR-12**
 - ✅ Código totalmente tipado com suporte a análise por IDEs
-- ✅ 56 testes automatizados com 136 assertions no padrão AAA
+- ✅ 56 testes automatizados com 137 assertions no padrão AAA
 
 ### Comandos de qualidade
 
@@ -477,6 +480,7 @@ docker compose exec app php artisan temporary-users:cleanup
 - ✅ Expiração de usuários temporários com command de cleanup
 - ✅ Tokens sensíveis criptografados com `Crypt`
 - ✅ Erros internos não vazam para o cliente
+- ✅ Strings centralizadas em Enums (mensagens, status, e-mails)
 - ✅ Job assíncrono com retries e método `failed()`
 - ✅ Logs de envio de e-mails (`MailLog`)
 - ✅ API Resource controlando campos expostos
