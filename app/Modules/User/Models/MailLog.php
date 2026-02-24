@@ -30,9 +30,11 @@ class MailLog extends Model
     ];
 
     /**
-     * Campos tratados como instâncias de Carbon.
+     * Conversão automática de tipos de atributos.
      *
-     * @var array<int, string>
+     * @var array<string, string>
      */
-    protected $dates = ['sent_at'];
+    protected $casts = [
+        'sent_at' => 'datetime',
+    ];
 }
