@@ -28,12 +28,11 @@ class CleanExpiredTemporaryUsersCommandTest extends TestCase
         $this->createTemporaryUser('expired2@test.com', -1);
         $this->createTemporaryUser('valid@test.com', 10);
 
-        // Act
+        // Act & Assert
         $this->artisan('temporary-users:cleanup')
-            ->expectsOutputToContain('2')
+            ->expectsOutputToContain('2') /** @phpstan-ignore method.nonObject */
             ->assertSuccessful();
 
-        // Assert
         $this->assertDatabaseMissing('temporary_users', ['email' => 'expired1@test.com']);
         $this->assertDatabaseMissing('temporary_users', ['email' => 'expired2@test.com']);
         $this->assertDatabaseHas('temporary_users', ['email' => 'valid@test.com']);
@@ -45,12 +44,11 @@ class CleanExpiredTemporaryUsersCommandTest extends TestCase
         $this->createTemporaryUser('valid1@test.com', 10);
         $this->createTemporaryUser('valid2@test.com', 15);
 
-        // Act
+        // Act & Assert
         $this->artisan('temporary-users:cleanup')
-            ->expectsOutputToContain('0')
+            ->expectsOutputToContain('0') /** @phpstan-ignore method.nonObject */
             ->assertSuccessful();
 
-        // Assert
         $this->assertDatabaseCount('temporary_users', 2);
     }
 
@@ -58,9 +56,9 @@ class CleanExpiredTemporaryUsersCommandTest extends TestCase
     {
         // Arrange — tabela vazia
 
-        // Act
+        // Act & Assert
         $this->artisan('temporary-users:cleanup')
-            ->expectsOutputToContain('0')
+            ->expectsOutputToContain('0') /** @phpstan-ignore method.nonObject */
             ->assertSuccessful();
 
         // Assert

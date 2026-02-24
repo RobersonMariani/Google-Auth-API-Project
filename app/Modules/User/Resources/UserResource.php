@@ -21,7 +21,7 @@ class UserResource extends JsonResource
             'id'         => $this->id,
             'name'       => $this->name,
             'cpf'        => $this->cpf,
-            'birth_date' => $this->birth_date?->format('Y-m-d'),
+            'birth_date' => $this->birth_date->format('Y-m-d'),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

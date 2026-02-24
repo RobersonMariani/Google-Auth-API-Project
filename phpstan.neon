@@ -9,5 +9,3 @@ parameters:
     - tests/
   checkUninitializedProperties: true
   inferPrivatePropertyTypeFromConstructor: true
-  ignoreErrors:
-    - '#Access to an undefined property App\\Modules\\User\\Models\\.*#'

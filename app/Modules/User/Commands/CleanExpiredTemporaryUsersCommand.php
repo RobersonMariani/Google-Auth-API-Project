@@ -22,6 +22,7 @@ class CleanExpiredTemporaryUsersCommand extends Command
 
     public function handle(): int
     {
+        /** @var int $deleted */
         $deleted = TemporaryUser::where('expires_at', '<=', now())->delete();
 
         $this->info("Removidos {$deleted} usuário(s) temporário(s) expirado(s).");

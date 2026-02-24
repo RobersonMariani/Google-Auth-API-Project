@@ -154,7 +154,9 @@ class UserServiceTest extends TestCase
         // Assert
         $this->assertInstanceOf(LengthAwarePaginator::class, $results);
         $this->assertCount(1, $results->items());
-        $this->assertSame('Roberson', $results->items()[0]->name);
+        /** @var User $firstUser */
+        $firstUser = $results->items()[0];
+        $this->assertSame('Roberson', $firstUser->name);
     }
 
     public function testListUsersWithNoFiltersReturnsAll(): void

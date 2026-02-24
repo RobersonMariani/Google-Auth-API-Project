@@ -7,10 +7,11 @@ use PHPUnit\Framework\TestCase;
 
 class CpfRuleTest extends TestCase
 {
+    /** @phpstan-ignore property.uninitialized */
     private CpfRule $rule;
 
     /** @var array<string> */
-    private array $errors;
+    private array $errors = [];
 
     protected function setUp(): void
     {
@@ -23,6 +24,7 @@ class CpfRuleTest extends TestCase
     {
         $this->errors = [];
 
+        /** @phpstan-ignore argument.type */
         $this->rule->validate('cpf', $value, function (string $message) {
             $this->errors[] = $message;
         });

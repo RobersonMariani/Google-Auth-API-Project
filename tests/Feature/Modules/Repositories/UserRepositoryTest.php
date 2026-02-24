@@ -12,6 +12,7 @@ class UserRepositoryTest extends TestCase
 {
     use RefreshDatabase;
 
+    /** @phpstan-ignore property.uninitialized */
     protected UserRepository $repository;
 
     protected function setUp(): void
@@ -42,6 +43,7 @@ class UserRepositoryTest extends TestCase
     public function testFindByGoogleEmailReturnsUser(): void
     {
         // Arrange
+        /** @var User $user */
         $user = User::factory()->create(['google_email' => 'find@teste.com']);
 
         // Act
@@ -66,6 +68,7 @@ class UserRepositoryTest extends TestCase
     public function testUpdateUserChangesAttributes(): void
     {
         // Arrange
+        /** @var User $user */
         $user = User::factory()->create(['name' => 'Nome Original', 'cpf' => '11111111111']);
 
         // Act
@@ -89,7 +92,9 @@ class UserRepositoryTest extends TestCase
         // Assert
         $this->assertInstanceOf(LengthAwarePaginator::class, $results);
         $this->assertCount(1, $results->items());
-        $this->assertEquals('Maria Silva', $results->items()[0]->name);
+        /** @var User $firstUser */
+        $firstUser = $results->items()[0];
+        $this->assertEquals('Maria Silva', $firstUser->name);
     }
 
     public function testFilterByCpfOnly(): void
@@ -103,7 +108,9 @@ class UserRepositoryTest extends TestCase
 
         // Assert
         $this->assertCount(1, $results->items());
-        $this->assertEquals('12345678900', $results->items()[0]->cpf);
+        /** @var User $firstUser */
+        $firstUser = $results->items()[0];
+        $this->assertEquals('12345678900', $firstUser->cpf);
     }
 
     public function testFilterByNameAndCpf(): void
@@ -117,7 +124,9 @@ class UserRepositoryTest extends TestCase
 
         // Assert
         $this->assertCount(1, $results->items());
-        $this->assertEquals('12345678900', $results->items()[0]->cpf);
+        /** @var User $firstUser */
+        $firstUser = $results->items()[0];
+        $this->assertEquals('12345678900', $firstUser->cpf);
     }
 
     public function testFilterWithNoResultsReturnsEmpty(): void
@@ -136,6 +145,7 @@ class UserRepositoryTest extends TestCase
     public function testFilterExcludesSoftDeletedUsers(): void
     {
         // Arrange
+        /** @var User $user */
         $user = User::factory()->create(['name' => 'Deletado']);
         $user->delete();
         User::factory()->create(['name' => 'Ativo']);
@@ -145,21 +155,27 @@ class UserRepositoryTest extends TestCase
 
         // Assert
         $this->assertCount(1, $results->items());
-        $this->assertEquals('Ativo', $results->items()[0]->name);
+        /** @var User $firstUser */
+        $firstUser = $results->items()[0];
+        $this->assertEquals('Ativo', $firstUser->name);
     }
 
     public function testFilterReturnsOrderedByIdDesc(): void
     {
         // Arrange
-        $first  = User::factory()->create(['name' => 'Primeiro']);
-        $second = User::factory()->create(['name' => 'Segundo']);
+        User::factory()->create(['name' => 'Primeiro']);
+        User::factory()->create(['name' => 'Segundo']);
 
         // Act
         $results = $this->repository->getUsersFilteredByNameOrCpf(null, null, 20);
         $items   = $results->items();
 
         // Assert
+        /** @var User $first */
+        $first = $items[0];
+        /** @var User $second */
+        $second = $items[1];
         $this->assertCount(2, $items);
-        $this->assertTrue($items[0]->id > $items[1]->id);
+        $this->assertTrue($first->id > $second->id);
     }
 }

@@ -85,6 +85,7 @@ class GoogleAuthServiceTest extends TestCase
 
         // Assert
         $this->assertEquals($email, $result->email);
+        $this->assertNotNull($result->expires_at);
         $this->assertTrue($result->expires_at->isFuture());
         $this->assertDatabaseCount('temporary_users', 1);
     }

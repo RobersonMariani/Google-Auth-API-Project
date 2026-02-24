@@ -20,6 +20,7 @@ class UserControllerTest extends TestCase
     public function testIndexReturnsAuthenticatedUserData(): void
     {
         // Arrange
+        /** @var User $user */
         $user = User::factory()->create(['name' => 'Roberson', 'cpf' => '12345678900']);
         Sanctum::actingAs($user);
 
@@ -46,6 +47,7 @@ class UserControllerTest extends TestCase
     public function testIndexDoesNotExposeGoogleTokenOrEmail(): void
     {
         // Arrange
+        /** @var User $user */
         $user = User::factory()->create([
             'google_token' => 'secret-token-value',
             'google_email' => 'secret@google.com',

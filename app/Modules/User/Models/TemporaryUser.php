@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Model;
  * @method static Builder<self> where(string $column, mixed $operator = null, mixed $value = null)
  * @method static Builder<self> notExpired()
  * @method static self create(array<string, mixed> $attributes = [])
+ * @method static self updateOrCreate(array<string, mixed> $attributes, array<string, mixed> $values = [])
  * @method static Builder<self> orderBy(string $column, string $direction = 'asc')
  * @method static Builder<self> when(mixed $value, callable $callback, ?callable $default = null)
  * @method static \Illuminate\Contracts\Pagination\LengthAwarePaginator<int, self> paginate(int $perPage = 15, array<int, string> $columns = ['*'], string $pageName = 'page', ?int $page = null)

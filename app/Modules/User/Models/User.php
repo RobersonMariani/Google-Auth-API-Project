@@ -28,8 +28,8 @@ use Laravel\Sanctum\HasApiTokens;
  */
 class User extends Authenticatable
 {
-    /** @use \Illuminate\Database\Eloquent\Factories\HasFactory<\Database\Factories\Modules\User\Models\UserFactory> */
     use HasApiTokens;
+    /** @use \Illuminate\Database\Eloquent\Factories\HasFactory<\Database\Factories\Modules\User\Models\UserFactory> */
     use HasFactory;
     use SoftDeletes;
 
