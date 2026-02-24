@@ -57,12 +57,14 @@ class GoogleAuthController extends Controller
 
             /** @var string $urlFront */
             $urlFront = config('services.front_callback_url');
+            /** @var string $registerPath */
+            $registerPath = config('services.front_register_path');
 
             if (empty($urlFront)) {
                 throw new \RuntimeException(AuthMessagesEnum::INVALID_FRONT_CONFIG->value);
             }
 
-            $endPoint = $urlFront . '/register?email=' . urlencode($user->email);
+            $endPoint = $urlFront . $registerPath . '?email=' . urlencode($user->email);
 
             return redirect($endPoint);
         } catch (Throwable $e) {

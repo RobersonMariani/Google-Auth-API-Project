@@ -41,5 +41,6 @@ return [
         'redirect_uri' => env('GOOGLE_REDIRECT_URI'),
     ],
 
-    'front_callback_url' => env('FRONT_CALLBACK_URL', 'http://localhost:5173'),
+    'front_callback_url'      => env('FRONT_CALLBACK_URL', 'http://localhost:5173'),
+    'front_register_path'     => env('FRONT_REGISTER_PATH', '/register'),
 ];
