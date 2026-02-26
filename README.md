@@ -1,215 +1,103 @@
-# 🔐 Google Auth API Project
+# Google Auth API
 
-Este projeto é uma API RESTful desenvolvida com **Laravel 12** para autenticação de usuários via **Google OAuth 2.0**, com fluxo de cadastro em duas etapas: login social seguido de complemento de dados pessoais (nome, CPF e data de nascimento).
+API RESTful para autenticação de usuários via Google OAuth 2.0, com fluxo de cadastro em duas etapas (login social + complemento de dados pessoais), construída com Laravel 12.
 
----
+## Funcionalidades
 
-## 🚀 Tecnologias Utilizadas
+- Autenticação via Google OAuth 2.0 (login social)
+- Cadastro em duas etapas: login Google → complemento de dados (nome, CPF, data de nascimento)
+- Armazenamento temporário de usuários pré-cadastro com expiração de 15 minutos
+- Validação algorítmica de CPF com dígitos verificadores (regra customizada)
+- E-mail de confirmação de cadastro via job assíncrono (3 tentativas, timeout de 30s)
+- Registro de logs de envio de e-mails (`MailLog`)
+- Listagem de usuários com filtros (nome, CPF) e paginação configurável
+- Tokens do Google criptografados com `Crypt` do Laravel
+- Limpeza automática de registros temporários expirados via comando Artisan
+- Rate limiting por tipo de rota (auth, registration, api)
+- Soft delete nos usuários
 
-- PHP 8.4
-- Laravel 12
-- PostgreSQL 17
-- Laravel Sanctum
-- Google API Client (OAuth 2.0)
-- PHPUnit
-- Docker + Docker Compose
-- PHPDoc
-- PHPStan (nível 9)
-- PHP-CS-Fixer (PSR-12)
-- PSR-4 Autoload
-- Princípios SOLID
-- Design Patterns (Repository, DTO, Service, Resource)
+## Stack
 
----
+| Camada         | Tecnologia                                      |
+|----------------|--------------------------------------------------|
+| Linguagem      | PHP 8.4                                          |
+| Framework      | Laravel 12                                       |
+| Banco de Dados | PostgreSQL 17                                    |
+| Autenticação   | Laravel Sanctum + Google OAuth 2.0               |
+| OAuth Client   | Google API Client (`google/apiclient`)           |
+| Fila / Cache   | Database driver                                  |
+| Code Style     | PHP-CS-Fixer (PSR-12)                            |
+| Análise        | PHPStan (nível 9)                                |
+| Testes         | PHPUnit (unitários + feature)                    |
+| Containers     | Docker Compose                                   |
 
-## 🧩 Estrutura Modular
+## Requisitos
 
-O projeto foi construído com arquitetura modular, onde cada domínio está separado com suas próprias responsabilidades:
+- Docker e Docker Compose
 
-```
-app/
-├── Http/Controllers/
-├── Providers/
-│   └── AppServiceProvider.php
-└── Modules/
-    └── User/
-        ├── Commands/
-        │   └── CleanExpiredTemporaryUsersCommand.php
-        ├── Controllers/
-        │   ├── GoogleAuthController.php
-        │   └── UserController.php
-        ├── DTOs/
-        │   ├── CompleteUserDataDTO.php
-        │   └── UserFilterDTO.php
-        ├── Enums/
-        │   ├── AuthMessagesEnum.php
-        │   ├── EmailMessagesEnum.php
-        │   ├── MailLogStatusEnum.php
-        │   └── UserMessagesEnum.php
-        ├── Jobs/
-        │   └── SendRegistrationEmailJob.php
-        ├── Models/
-        │   ├── MailLog.php
-        │   ├── TemporaryUser.php
-        │   └── User.php
-        ├── Repositories/
-        │   ├── UserRepository.php
-        │   └── UserRepositoryInterface.php
-        ├── Requests/
-        │   └── CompleteUserRequest.php
-        ├── Resources/
-        │   └── UserResource.php
-        ├── Rules/
-        │   └── CpfRule.php
-        ├── Services/
-        │   ├── GoogleAuthService.php
-        │   └── UserService.php
-        └── routes/
-            └── api.php
-```
-
----
-
-## 📌 Regras de Negócio Atendidas
-
-- ✅ Autenticação via Google OAuth 2.0 (login social)
-- ✅ Cadastro em duas etapas (login Google → complemento de dados)
-- ✅ Armazenamento temporário de usuários pré-cadastro (`TemporaryUser`) com expiração de 15 minutos
-- ✅ Finalização de cadastro com nome, CPF e data de nascimento
-- ✅ Validação de CPF com dígitos verificadores (regra customizada `CpfRule`)
-- ✅ Validação de data de nascimento (não pode ser futura)
-- ✅ Tokens do Google criptografados com `Crypt` do Laravel
-- ✅ E-mail de confirmação de cadastro via Job assíncrono (3 tentativas, timeout de 30s)
-- ✅ Registro de logs de envio de e-mails (`MailLog`)
-- ✅ Validação de e-mail único por cadastro (impede duplicidade)
-- ✅ Token Sanctum retornado na resposta de cadastro para autenticação imediata
-- ✅ Listagem de usuários autenticada com filtros paginados (nome e CPF, máximo 100 por página)
-- ✅ Limpeza automática de registros temporários expirados (`artisan temporary-users:cleanup`)
-- ✅ Soft delete nos usuários
-- ✅ API RESTful estruturada com API Resources
-- ✅ CORS configurado para integração com frontend
-
----
-
-## 🛡️ Segurança
-
-- ✅ Rotas protegidas com `auth:sanctum` (listagem de usuários)
-- ✅ Rate limiting: 10 req/min para autenticação, 5 req/min para cadastro, 60 req/min geral
-- ✅ Tokens sensíveis criptografados com `Crypt`
-- ✅ Erros internos não expostos ao cliente (mensagens genéricas via Enum)
-- ✅ `env()` utilizado apenas em arquivos de config (compatível com `config:cache`)
-- ✅ API Resource controlando campos retornados (sem expor `google_token`, `google_email`, `deleted_at`)
-- ✅ Expiração de 15 minutos para usuários temporários
-- ✅ Headers de segurança no Nginx (X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Referrer-Policy)
-- ✅ Usuário não-root nos containers Docker
-- ✅ Email codificado com `urlencode()` na URL de redirect
-
----
-
-## 🧪 Testes Automatizados
-
-**56 testes** com **137 assertions**, todos no padrão **AAA** (Arrange / Act / Assert).
-
-### Controllers (13 testes)
-
-**GoogleAuthController:**
-- URL de login retorna URL válida
-- Callback armazena usuário temporário e redireciona
-- Callback sem código retorna 400
-- Callback com código vazio retorna 400
-- Callback com erro retorna mensagem genérica (sem vazar detalhes internos)
-
-**UserController:**
-- Listagem retorna dados para usuário autenticado
-- Listagem sem autenticação retorna 401
-- Listagem não expõe `google_token` nem `google_email`
-- Cadastro completo cria usuário a partir do temporário
-- CPF inválido retorna 422
-- CPF com dígitos repetidos retorna 422
-- Data de nascimento futura retorna 422
-- Campos obrigatórios faltando retorna 422
-- Resposta usa formato do Resource (sem dados sensíveis)
-
-### Services (11 testes)
-
-**GoogleAuthService:**
-- Callback cria usuário temporário
-- Callback atualiza usuário temporário existente
-- Callback define tempo de expiração
-- Token inválido lança exceção
-- Token expirado lança exceção
-
-**UserService:**
-- Cadastro completo cria usuário a partir do temporário
-- Cadastro completo deleta usuário temporário após criação
-- Temporário expirado lança exceção
-- Temporário inexistente lança exceção
-- Listagem com filtros retorna resultados corretos
-- Listagem sem filtros retorna todos
-
-### Repositories (10 testes)
-
-- Criação de usuário persiste no banco
-- Busca por e-mail do Google retorna usuário
-- Busca por e-mail inexistente retorna null
-- Atualização de dados altera atributos
-- Filtragem apenas por nome
-- Filtragem apenas por CPF
-- Filtragem por nome e CPF
-- Filtragem sem resultados retorna vazio
-- Filtragem exclui soft deleted
-- Resultados ordenados por ID decrescente
-
-### Unitários (18 testes)
-
-**CpfRule:**
-- CPF válido (somente dígitos)
-- CPF válido (com formatação)
-- Outro CPF válido
-- CPF com dígitos verificadores errados
-- Todos os dígitos repetidos (10 variantes)
-- Menos de 11 dígitos
-- Mais de 11 dígitos
-- String vazia
-- Valor não-string
-- CPF com letras
-
-**UserFilterDTO:**
-- Construtor remove formatação do CPF
-- Construtor mantém CPF null
-- fromRequest com valores padrão
-- fromRequest com todos os parâmetros
-- `per_page` limitado a 100
-- `per_page` mínimo é 1
-- `per_page` negativo é clampado
-- `per_page` não-numérico usa padrão
-
-### Commands (3 testes)
-
-**CleanExpiredTemporaryUsersCommand:**
-- Remove registros expirados e preserva válidos
-- Sem expirados não deleta nada
-- Tabela vazia roda sem erro
-
-### Executando os testes
+## Instalação
 
 ```bash
-docker compose exec app php artisan test
+git clone https://github.com/RobersonMariani/Google-Auth-API-Project.git
+cd Google-Auth-API-Project
+
+cp .env.example .env
 ```
 
-Rodar um teste específico:
+Preencha as variáveis do Google OAuth no `.env`:
+
+```env
+GOOGLE_CLIENT_ID=seu-client-id
+GOOGLE_CLIENT_SECRET=seu-client-secret
+```
+
+Suba os containers e configure o Laravel:
 
 ```bash
-docker compose exec app php artisan test --filter=GoogleAuthControllerTest
+docker compose up -d --build
+
+docker compose exec app composer install
+docker compose exec app php artisan key:generate
+docker compose exec app php artisan migrate --seed
+```
+
+Após o setup, a API estará disponível em `http://localhost:8000`.
+
+## Serviços
+
+| Serviço    | URL / Porta          | Descrição                     |
+|------------|----------------------|-------------------------------|
+| API (Nginx)| http://localhost:8000 | Proxy reverso para PHP-FPM   |
+| App (PHP)  | porta 9000 (interna) | PHP 8.4 FPM Alpine           |
+| PostgreSQL | localhost:5432        | Banco de dados                |
+
+## Dados Iniciais (Seeder)
+
+| Dado      | Detalhe                               |
+|-----------|---------------------------------------|
+| Usuários  | 150.000 usuários gerados via factory (batches de 5.000) |
+
+---
+
+## Endpoints
+
+As rotas de listagem e perfil requerem o header:
+
+```
+Authorization: Bearer {token}
+```
+
+### Health Check
+
+```
+GET /up
 ```
 
 ---
 
-## 📮 Endpoints da API
+### Autenticação Google
 
-### 🔑 Autenticação Google
-
-**Obter URL de login:**
+#### Obter URL de login
 
 ```
 GET /api/google/login-url
@@ -217,21 +105,15 @@ GET /api/google/login-url
 
 Middleware: `throttle:auth` (10 req/min)
 
-Resposta:
+**Resposta** `200`:
+
 ```json
 {
-  "url": "https://accounts.google.com/o/oauth2/v2/auth?..."
+  "url": "https://accounts.google.com/o/oauth2/v2/auth?client_id=..."
 }
 ```
 
-| Status | Descrição |
-|--------|-----------|
-| `200`  | URL gerada com sucesso |
-| `429`  | Rate limit excedido |
-
----
-
-**Callback do Google:**
+#### Callback do Google
 
 ```
 GET /api/google/callback?code={authorization_code}
@@ -239,53 +121,26 @@ GET /api/google/callback?code={authorization_code}
 
 Middleware: `throttle:auth` (10 req/min)
 
-| Status | Descrição |
-|--------|-----------|
-| `302`  | Redireciona para `FRONT_CALLBACK_URL` + `FRONT_REGISTER_PATH` + `?email={email}` |
-| `400`  | Código de autorização inválido |
-| `429`  | Rate limit excedido |
-| `500`  | Falha na autenticação com o Google |
+O Google redireciona o usuário para esta rota após autenticação. A API cria um `TemporaryUser` (expira em 15 min) e redireciona para o frontend com o e-mail na query string.
+
+**Resposta** `302`:
+
+```
+→ {FRONT_CALLBACK_URL}{FRONT_REGISTER_PATH}?email={email}
+```
+
+| Status | Descrição                                |
+|--------|------------------------------------------|
+| `302`  | Redireciona para o frontend              |
+| `400`  | Código de autorização ausente ou inválido|
+| `429`  | Rate limit excedido                      |
+| `500`  | Falha na autenticação com o Google       |
 
 ---
 
-### 👤 Usuários
+### Usuários
 
-**Listar usuários:**
-
-```
-GET /api/users?name={nome}&cpf={cpf}&per_page={quantidade}&page={pagina}
-```
-
-Middleware: `auth:sanctum`
-
-Todos os query params são opcionais. `per_page` aceita valores entre 1 e 100 (padrão: 20).
-
-Resposta:
-
-```json
-{
-  "message": "Lista de usuários carregada com sucesso.",
-  "data": [
-    {
-      "id": 1,
-      "name": "João Silva",
-      "cpf": "12345678900",
-      "birth_date": "1990-01-15",
-      "created_at": "2025-04-13T00:00:00.000000Z",
-      "updated_at": "2025-04-13T00:00:00.000000Z"
-    }
-  ]
-}
-```
-
-| Status | Descrição |
-|--------|-----------|
-| `200`  | Lista retornada com sucesso |
-| `401`  | Não autenticado |
-
----
-
-**Completar cadastro:**
+#### Completar cadastro
 
 ```
 POST /api/users/complete
@@ -293,7 +148,8 @@ POST /api/users/complete
 
 Middleware: `throttle:registration` (5 req/min)
 
-Body:
+**Body:**
+
 ```json
 {
   "name": "João Silva",
@@ -303,14 +159,8 @@ Body:
 }
 ```
 
-| Campo          | Tipo   | Obrigatório | Regras                                          |
-|----------------|--------|-------------|--------------------------------------------------|
-| `name`         | string | sim         | max: 255                                         |
-| `cpf`          | string | sim         | max: 14, validação de dígitos verificadores      |
-| `birth_date`   | string | sim         | formato date, anterior a hoje, posterior a 1900   |
-| `email`        | string | sim         | formato email válido, único no sistema           |
+**Resposta** `201`:
 
-Resposta:
 ```json
 {
   "message": "Usuário criado com sucesso.",
@@ -319,23 +169,68 @@ Resposta:
     "name": "João Silva",
     "cpf": "52998224725",
     "birth_date": "1990-01-15",
-    "created_at": "2025-04-13T00:00:00.000000Z",
-    "updated_at": "2025-04-13T00:00:00.000000Z"
+    "created_at": "2026-02-24T12:00:00.000000Z",
+    "updated_at": "2026-02-24T12:00:00.000000Z"
   },
   "token": "1|abc123def456..."
 }
 ```
 
-| Status | Descrição |
-|--------|-----------|
-| `201`  | Usuário criado com sucesso (inclui token Sanctum) |
-| `422`  | Erro de validação (CPF inválido, data futura, campos faltando, email duplicado) |
-| `429`  | Rate limit excedido |
-| `500`  | Usuário temporário não encontrado ou expirado |
+**Validações:**
+- `name`: obrigatório, string, máx. 255 caracteres
+- `cpf`: obrigatório, máx. 14 caracteres, validação algorítmica de dígitos verificadores
+- `birth_date`: obrigatório, formato date, anterior a hoje, posterior a 1900
+- `email`: obrigatório, formato e-mail válido, único no sistema
 
----
+| Status | Descrição                                                    |
+|--------|--------------------------------------------------------------|
+| `201`  | Usuário criado com sucesso (inclui token Sanctum)            |
+| `422`  | Erro de validação (CPF inválido, data futura, e-mail duplicado) |
+| `429`  | Rate limit excedido                                          |
+| `500`  | Usuário temporário não encontrado ou expirado                |
 
-**Usuário autenticado (Sanctum):**
+#### Listar usuários
+
+```
+GET /api/users
+GET /api/users?name=João&cpf=529&per_page=20&page=1
+```
+
+Middleware: `auth:sanctum`
+
+| Parâmetro  | Tipo   | Padrão | Descrição                    |
+|------------|--------|--------|------------------------------|
+| `name`     | string | —      | Filtra por nome (parcial)    |
+| `cpf`      | string | —      | Filtra por CPF (parcial)     |
+| `page`     | int    | 1      | Página atual                 |
+| `per_page` | int    | 20     | Itens por página (máx. 100)  |
+
+**Resposta** `200`:
+
+```json
+{
+  "message": "Lista de usuários carregada com sucesso.",
+  "data": [
+    {
+      "id": 1,
+      "name": "João Silva",
+      "cpf": "52998224725",
+      "birth_date": "1990-01-15",
+      "created_at": "2026-02-24T12:00:00.000000Z",
+      "updated_at": "2026-02-24T12:00:00.000000Z"
+    }
+  ],
+  "links": { "first": "...", "last": "...", "prev": null, "next": "..." },
+  "meta": { "current_page": 1, "last_page": 1, "per_page": 20, "total": 10 }
+}
+```
+
+| Status | Descrição                     |
+|--------|-------------------------------|
+| `200`  | Lista retornada com sucesso   |
+| `401`  | Não autenticado               |
+
+#### Usuário autenticado
 
 ```
 GET /api/user
@@ -343,161 +238,22 @@ GET /api/user
 
 Middleware: `auth:sanctum`
 
-| Status | Descrição |
-|--------|-----------|
-| `200`  | Retorna dados do usuário autenticado |
-| `401`  | Não autenticado |
+**Resposta** `200`:
 
----
-
-## 🐳 Docker
-
-O projeto possui um ambiente Docker completo com **PHP-FPM**, **Nginx** e **PostgreSQL**, configurado com boas práticas.
-
-### Estrutura Docker
-
-```
-.docker/
-├── php/
-│   ├── Dockerfile    # Multi-stage: base (produção) + dev (com Xdebug)
-│   └── php.ini       # Configurações customizadas do PHP
-└── nginx/
-    └── default.conf  # Configuração do Nginx para Laravel
-
-docker-compose.yml    # Orquestração dos serviços
-.dockerignore         # Exclusões para o build
-```
-
-### Serviços
-
-| Serviço      | Imagem                | Porta           |
-|--------------|-----------------------|-----------------|
-| **app**      | PHP 8.4 FPM Alpine    | 9000 (interna)  |
-| **nginx**    | Nginx 1.27 Alpine     | 8000 → 80       |
-| **postgres** | PostgreSQL 17 Alpine  | 5432 → 5432     |
-
-### Subindo o projeto
-
-```bash
-docker compose up -d --build
-```
-
-### Executando comandos dentro do container
-
-```bash
-docker compose exec app bash
-```
-
-### Executando comandos fora do container
-
-```bash
-docker compose exec app php artisan migrate
+```json
+{
+  "id": 1,
+  "name": "João Silva",
+  "cpf": "52998224725",
+  "birth_date": "1990-01-15",
+  "created_at": "2026-02-24T12:00:00.000000Z",
+  "updated_at": "2026-02-24T12:00:00.000000Z"
+}
 ```
 
 ---
 
-## 📄 Como Rodar o Projeto
-
-1. **Clone o repositório:**
-
-```bash
-git clone https://github.com/RobersonMariani/Google-Auth-API-Project.git
-cd Google-Auth-API-Project
-```
-
-2. **Configure o arquivo de ambiente:**
-
-```bash
-cp .env.example .env
-```
-
-Preencha as variáveis do Google OAuth no `.env`:
-
-```env
-GOOGLE_CLIENT_ID=seu-client-id
-GOOGLE_CLIENT_SECRET=seu-client-secret
-GOOGLE_REDIRECT_URI=http://localhost:8000/api/google/callback
-FRONT_CALLBACK_URL=http://localhost:5173
-FRONT_REGISTER_PATH=/register
-```
-
-3. **Suba os containers:**
-
-```bash
-docker compose up -d --build
-```
-
-4. **Instale as dependências e configure o Laravel:**
-
-```bash
-docker compose exec app composer install
-docker compose exec app php artisan key:generate
-docker compose exec app php artisan migrate
-```
-
-5. **Rode os testes:**
-
-```bash
-docker compose exec app php artisan test
-```
-
-6. **Acesse a aplicação em:** `http://localhost:8000`
-
----
-
-## ✅ Qualidade e Análise de Código
-
-- ✅ PHPDoc para documentação de classes, métodos e propriedades
-- ✅ PHPStan nível **9** (máximo) configurado
-- ✅ PHP-CS-Fixer com padrão **PSR-12**
-- ✅ Código totalmente tipado com suporte a análise por IDEs
-- ✅ 56 testes automatizados com 137 assertions no padrão AAA
-
-### Comandos de qualidade
-
-```bash
-# Análise estática com PHPStan
-composer phpstan
-
-# Verificar estilo de código
-composer cs:check
-
-# Corrigir estilo de código automaticamente
-composer cs:fix
-
-# Limpar usuários temporários expirados
-docker compose exec app php artisan temporary-users:cleanup
-```
-
----
-
-## 🛡️ Diferenciais Entregues
-
-- ✅ Código limpo e modularizado
-- ✅ Princípios SOLID aplicados
-- ✅ Padrões PSR-4 e PSR-12
-- ✅ 56 testes automatizados no padrão AAA (unitários + feature)
-- ✅ Uso de DTOs, Services, Repositories e Resources
-- ✅ Validação de CPF com dígitos verificadores (regra customizada)
-- ✅ Rate limiting por tipo de rota (auth, registration, api)
-- ✅ Rotas protegidas com Laravel Sanctum
-- ✅ Expiração de usuários temporários com command de cleanup
-- ✅ Tokens sensíveis criptografados com `Crypt`
-- ✅ Erros internos não vazam para o cliente
-- ✅ Strings centralizadas em Enums (mensagens, status, e-mails)
-- ✅ Job assíncrono com retries e método `failed()`
-- ✅ Logs de envio de e-mails (`MailLog`)
-- ✅ API Resource controlando campos expostos
-- ✅ Docker com multi-stage build e Xdebug para desenvolvimento
-- ✅ Healthcheck no PostgreSQL
-- ✅ Headers de segurança no Nginx
-- ✅ Usuário não-root nos containers
-- ✅ Índices de performance no banco de dados
-- ✅ Documentação clara e detalhada
-
----
-
-## 🔄 Fluxo de Autenticação
+## Fluxo de Autenticação
 
 ```
 ┌──────────┐     1. GET /api/google/login-url     ┌──────────┐
@@ -526,7 +282,123 @@ docker compose exec app php artisan temporary-users:cleanup
 
 ---
 
-## 👨‍💻 Autor
+## Segurança
+
+- Rotas protegidas com `auth:sanctum`
+- Rate limiting: 10 req/min (auth), 5 req/min (registration), 60 req/min (api geral)
+- Tokens sensíveis criptografados com `Crypt`
+- Erros internos não expostos ao cliente (mensagens genéricas via Enum)
+- API Resource controlando campos retornados (sem expor `google_token`, `google_email`, `deleted_at`)
+- Expiração de 15 minutos para usuários temporários
+- Headers de segurança no Nginx (X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Referrer-Policy)
+- Usuário não-root nos containers Docker
+- `env()` utilizado apenas em arquivos de config (compatível com `config:cache`)
+
+## Variáveis de Ambiente
+
+| Variável               | Descrição                                | Valor Padrão                                  |
+|------------------------|------------------------------------------|-----------------------------------------------|
+| `DB_CONNECTION`        | Driver do banco                          | `pgsql`                                       |
+| `DB_HOST`              | Host do PostgreSQL                       | `postgres`                                    |
+| `DB_PORT`              | Porta do PostgreSQL                      | `5432`                                        |
+| `DB_DATABASE`          | Nome do banco                            | `google_auth_api_project`                     |
+| `DB_USERNAME`          | Usuário do banco                         | `laravel`                                     |
+| `DB_PASSWORD`          | Senha do banco                           | `secret`                                      |
+| `QUEUE_CONNECTION`     | Driver da fila                           | `database`                                    |
+| `CACHE_STORE`          | Driver de cache                          | `database`                                    |
+| `GOOGLE_CLIENT_ID`     | Client ID do Google OAuth                | —                                             |
+| `GOOGLE_CLIENT_SECRET` | Client Secret do Google OAuth            | —                                             |
+| `GOOGLE_REDIRECT_URI`  | URL de callback do Google                | `http://localhost:8000/api/google/callback`    |
+| `FRONT_CALLBACK_URL`   | URL base do frontend                     | `http://localhost:5173`                        |
+| `FRONT_REGISTER_PATH`  | Caminho da página de registro no frontend| `/register`                                   |
+| `APP_PORT`             | Porta da API (Docker)                    | `8000`                                        |
+
+## Testes
+
+**56 testes** com **137 assertions**, todos no padrão **AAA** (Arrange / Act / Assert).
+
+| Módulo                    | Testes | Descrição                                              |
+|---------------------------|--------|--------------------------------------------------------|
+| GoogleAuthController      | 5      | URL de login, callback, erros de código                |
+| UserController            | 8      | Listagem, cadastro, validações, campos protegidos      |
+| GoogleAuthService         | 5      | Criação/atualização de temporários, expiração, tokens  |
+| UserService               | 6      | Cadastro completo, temporário expirado, filtros        |
+| UserRepository            | 10     | CRUD, filtros, soft delete, ordenação                  |
+| CpfRule (unitário)        | 10     | CPFs válidos, inválidos, repetidos, formatos           |
+| UserFilterDTO (unitário)  | 8      | Construtor, limites de per_page, valores padrão        |
+| CleanExpiredCommand       | 3      | Limpeza de expirados, tabela vazia                     |
+
+```bash
+# Todos os testes
+docker compose exec app php artisan test
+
+# Teste específico
+docker compose exec app php artisan test --filter=GoogleAuthControllerTest
+```
+
+## Qualidade de Código
+
+```bash
+# Análise estática (PHPStan nível 9)
+composer phpstan
+
+# Verificar estilo de código (PHP-CS-Fixer — PSR-12)
+composer cs:check
+
+# Corrigir estilo de código automaticamente
+composer cs:fix
+
+# Limpar usuários temporários expirados
+docker compose exec app php artisan temporary-users:cleanup
+```
+
+## Arquitetura
+
+O projeto segue uma **arquitetura modular** com o domínio `User` isolado em `app/Modules/User/`. O módulo possui suas próprias camadas seguindo os padrões Repository, DTO, Service e Resource:
+
+```
+app/Modules/
+└── User/
+    ├── Commands/        → Comandos Artisan (limpeza de temporários)
+    ├── Controllers/     → Recebe a requisição HTTP e delega ao Service
+    ├── DTOs/            → Data Transfer Objects (tipagem de dados)
+    ├── Enums/           → Mensagens e status centralizados
+    ├── Jobs/            → Jobs assíncronos (envio de e-mails)
+    ├── Models/          → Eloquent models (User, TemporaryUser, MailLog)
+    ├── Repositories/    → Acesso a dados (abstração do Eloquent)
+    ├── Requests/        → Form Requests com validação
+    ├── Resources/       → Formatação da resposta JSON
+    ├── Rules/           → Regras de validação customizadas (CPF)
+    ├── Services/        → Regra de negócio (GoogleAuth + User)
+    └── routes/          → Rotas do módulo
+```
+
+### Fluxo de uma requisição
+
+```
+Request → Controller → FormRequest (validação) → Service (regra de negócio) → Repository (dados) → Resource (resposta)
+```
+
+## Estrutura Docker
+
+```
+.docker/
+├── php/
+│   ├── Dockerfile       → PHP 8.4-FPM Alpine (multi-stage: base + dev com Xdebug)
+│   └── php.ini          → 256M memory, 64M upload, timezone America/Sao_Paulo
+└── nginx/
+    └── default.conf     → Virtual host com headers de segurança
+```
+
+| Container   | Descrição                                       |
+|-------------|-------------------------------------------------|
+| `app`       | PHP 8.4 FPM — executa a aplicação Laravel       |
+| `nginx`     | Nginx 1.27 — proxy reverso para PHP-FPM         |
+| `postgres`  | PostgreSQL 17 — banco de dados com health check  |
+
+---
+
+## Autor
 
 **Roberson Mariani**
 Desenvolvedor Fullstack PHP & Laravel | JS e VueJS
